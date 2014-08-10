@@ -37,14 +37,20 @@
         },
         start : function(e){                 
             e.preventDefault();
+            e.stopPropagation();
 
-            var data = e.data;
+            var offset = $(this.stage).offset();
+            this.offsetX = offset.left;
+            this.offsetY = offset.top;
+
+            var data = this;
             data.touched = true;
         },
         end : function(e){                 
             e.preventDefault();
+            e.stopPropagation();
 
-            var data = e.data;
+            var data = this;
             data.touched = false;
 
             var pixel = data.context.getImageData(data.x, data.y, data.width, data.height).data;
@@ -61,8 +67,9 @@
         },
         move : function(e){                 
             e.preventDefault();
+            e.stopPropagation();
 
-            var data = e.data;
+            var data = this;
 
             if(data.touched){                     
                 if(e.changedTouches){                         
@@ -70,6 +77,15 @@
                 }                     
                 var x = (e.clientX + document.body.scrollLeft || e.pageX) - data.offsetX || 0;
                 var y = (e.clientY + document.body.scrollTop || e.pageY) - data.offsetY || 0;
+
+                console.info("e.clientX: " + e.clientX);
+                console.info("e.clientY: " + e.clientY);
+                console.info("e.pageX: " + e.pageX);
+                console.info("e.pageY: " + e.pageY);
+                console.info("data.offsetX: " + data.offsetX);
+                console.info("data.offsetY: " + data.offsetY);
+                console.info("body.scrollLeft: " + document.body.scrollLeft);
+                console.info("body.scrollTop: " + document.body.scrollTop);
 
                 data.context.beginPath()
                 data.context.arc(x, y, data.brushSize, 0, Math.PI * 2);
@@ -109,6 +125,32 @@
 
             ctx.fillText(t.text, t.x, t.y);
         },
+        bind : function(){
+            var o = this.stage;
+            var ins = this;
+
+            if(Util.CLICK_EVENT == "tap"){
+                o.addEventListener("touchstart", function(e){
+                    ins.start(e);
+                }, false);
+                o.addEventListener("touchmove", function(e){
+                    ins.move(e);
+                }, false);
+                o.addEventListener("touchend", function(e){
+                    ins.end(e);
+                }, false);
+            }else{
+                o.addEventListener("mousedown", function(e){
+                    ins.start(e);
+                }, false);
+                o.addEventListener("mousemove", function(e){
+                    ins.move(e);
+                }, false);
+                o.addEventListener("mouseup", function(e){
+                    ins.end(e);
+                }, false);
+            }
+        },
         paintImage : function(background, frontimage, x, y, width, height){
             this.ImageUtil = new ImageUtil(this.mask(width, height));
             this.x = x;
@@ -142,15 +184,7 @@
                 args : []
             }, x, y, width, height);
 
-            if(Util.CLICK_EVENT == "tap"){
-                $(this.stage).on("touchstart", "", this, this.start)
-                             .on("touchmove", "", this, this.move)
-                             .on("touchend", "", this, this.end);
-            }else{
-                $(this.stage).on("mousedown", "", this, this.start)
-                             .on("mousemove", "", this, this.move)
-                             .on("mouseup", "", this, this.end);
-            }
+            this.bind();
         },
         paintColor : function(background, color, x, y, width, height){
             this.ImageUtil = new ImageUtil(this.mask(width, height));
@@ -171,16 +205,7 @@
 
             this.context.globalCompositeOperation = "destination-out";
 
-
-            if(Util.CLICK_EVENT == "tap"){
-                $(this.stage).on("touchstart", "", this, this.start)
-                             .on("touchmove", "", this, this.move)
-                             .on("touchend", "", this, this.end);
-            }else{
-                $(this.stage).on("mousedown", "", this, this.start)
-                             .on("mousemove", "", this, this.move)
-                             .on("mouseup", "", this, this.end);
-            }
+            this.bind();
         }
     };
 
