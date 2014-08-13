@@ -25,6 +25,9 @@
         this.offsetY = this.stage.offsetTop;
         this.brushSize = 5;
         this.blurRadius = 40;
+        this.ready = null;
+        this.begin = null;
+        this.processing = null;
         this.complete = null;
         this.scratchText = null;
 
@@ -45,6 +48,8 @@
 
             var data = this;
             data.touched = true;
+
+            Util.execAfterMergerHandler(data.begin, []);
         },
         end : function(e){                 
             e.preventDefault();
@@ -87,6 +92,8 @@
                 console.info("body.scrollLeft: " + document.body.scrollLeft);
                 console.info("body.scrollTop: " + document.body.scrollTop);
 
+                Util.execAfterMergerHandler(data.processing, [x, y]);
+
                 data.context.beginPath()
                 data.context.arc(x, y, data.brushSize, 0, Math.PI * 2);
                 data.context.fill();
@@ -105,6 +112,15 @@
         },
         setBlurRadius : function(radius){
             this.blurRadius = radius;
+        },
+        setReady : function(handler){
+            this.ready = handler;
+        },
+        setBegin : function(handler){
+            this.begin = handler;
+        },
+        setProcessing : function(handler){
+            this.processing = handler;
         },
         setComplete : function(handler){
             this.complete = handler || null;
@@ -128,6 +144,8 @@
         bind : function(){
             var o = this.stage;
             var ins = this;
+
+            Util.execAfterMergerHandler(ins.ready, []);
 
             if(Util.CLICK_EVENT == "tap"){
                 o.addEventListener("touchstart", function(e){
@@ -179,12 +197,12 @@
                     this.appendText(this.scratchText)
 
                     this.context.globalCompositeOperation = "destination-out"; 
+
+                    this.bind();
                 },
                 context : this,
                 args : []
             }, x, y, width, height);
-
-            this.bind();
         },
         paintColor : function(background, color, x, y, width, height){
             this.ImageUtil = new ImageUtil(this.mask(width, height));
@@ -220,6 +238,21 @@
             },
             "setBrushSize" : function(size){
                 _sc.setBrushSize(size);
+
+                return this;
+            },
+            "setReady" : function(handler){
+                _sc.setReady(handler);
+
+                return this;
+            },
+            "setBegin" : function(handler){
+                _sc.setBegin(handler);
+
+                return this;
+            },
+            "setProcessing" : function(handler){
+                _sc.setProcessing(handler);
 
                 return this;
             },

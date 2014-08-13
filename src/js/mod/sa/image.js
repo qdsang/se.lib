@@ -211,10 +211,12 @@
             this.writeImageData(imageData, x, y);
         },
         blur : function(stage, context, imageData, x, y, width, height, radius, alpha){
-            if(true === alpha){
-                imageData = Blur.getRGBAData(imageData, width, height, radius);
-            }else{
-                imageData = Blur.getRGBData(imageData, width, height, radius);
+            if(radius > 0){
+                if(true === alpha){
+                    imageData = Blur.getRGBAData(imageData, width, height, radius);
+                }else{
+                    imageData = Blur.getRGBData(imageData, width, height, radius);
+                }
             }
 
             this.writeImageData(imageData, x, y);
