@@ -20,6 +20,10 @@
         this.y = 0;
         this.width = 0;
         this.height = 0;
+        this.imageX = 0;
+        this.imageY = 0;
+        this.imageWidth = 0;
+        this.imageHeight = 0;
         this.touched = false;
         this.offsetX = this.stage.offsetLeft;
         this.offsetY = this.stage.offsetTop;
@@ -30,6 +34,7 @@
         this.processing = null;
         this.complete = null;
         this.scratchText = null;
+        this.alpha = 1;
 
         this.setStageStyle("background-color", "transparent");
     };
@@ -107,6 +112,9 @@
 
             return canvas;
         },
+        setAlpha : function(alpha){
+            this.alpha = alpha;
+        },
         setBrushSize : function(size){
             this.brushSize = size;
         },
@@ -169,16 +177,51 @@
                 }, false);
             }
         },
-        paintImage : function(background, frontimage, x, y, width, height){
-            this.ImageUtil = new ImageUtil(this.mask(width, height));
+        clean : function(){
+            var ctx = this.context;
+
+            ctx.clearRect(0, 0, this.width, this.height);
+        },
+        setProperty : function(x, y, width, height, imgX, imgY, imgWidth, imgHeight){
             this.x = x;
             this.y = y;
             this.stage.width = this.width = width;
             this.stage.height = this.height = height;
 
+            this.imageX = imgX || 0;
+            this.imageY = imgY || 0;
+            this.imageWidth = imgWidth || width;
+            this.imageHeight = imgHeight || height;
+        },
+        fill : function(background, x, y, width, height, fillStyle){
+            var ctx = this.context;
+
+            this.setStageStyle("background", "url(" + background + ") no-repeat left top");
+            this.setStageStyle("background-size", "100.00000001% 100.00000001%");
+
+            ctx.globalAlpha = 1;
+
+            ctx.fillStyle = "transparent";             
+            ctx.fillRect(x, y, width, height);
+
+            ctx.globalAlpha = this.alpha;
+
+            ctx.fillStyle = fillStyle;
+            ctx.fillRect(x, y, width, height);
+
+            this.appendText(this.scratchText)
+
+            ctx.globalCompositeOperation = "destination-out"; 
+        },
+        paintImage : function(background, frontimage, x, y, width, height, imgX, imgY, imgWidth, imgHeight){
+            this.ImageUtil = new ImageUtil(this.mask(width, height));
+            
+            this.setProperty(x, y, width, height);
+
             this.ImageUtil.drawImage(frontimage, {
                 callback : function(stage, ctx, imageData, x, y, width, height){
                     var img = this.ImageUtil;
+                    var ctx = this.context;
 
                     img.pixel({
                         callback: img.blur,
@@ -186,42 +229,18 @@
                         args:[this.blurRadius, true]
                     });
 
-                    this.setStageStyle("background-image", "url(" + background + ")");
-
-                    this.context.fillStyle = "transparent";             
-                    this.context.fillRect(x, y, width, height);
-
-                    this.context.fillStyle = this.context.createPattern(img.stage, "no-repeat");
-                    this.context.fillRect(x, y, width, height);
-
-                    this.appendText(this.scratchText)
-
-                    this.context.globalCompositeOperation = "destination-out"; 
+                    this.fill(background, this.x, this.y, this.width, this.height, this.context.createPattern(img.stage, "no-repeat"));
 
                     this.bind();
                 },
                 context : this,
                 args : []
-            }, x, y, width, height);
+            }, this.imageX, this.imageY, this.imageWidth, this.imageHeight);
         },
         paintColor : function(background, color, x, y, width, height){
-            this.ImageUtil = new ImageUtil(this.mask(width, height));
-            this.x = x;
-            this.y = y;
-            this.stage.width = this.width = width;
-            this.stage.height = this.height = height;
+            this.setProperty(x, y, width, height);
 
-            this.setStageStyle("background-image", "url(" + background + ")");
-    
-            this.context.fillStyle = "transparent";             
-            this.context.fillRect(x, y, width, height);
-
-            this.context.fillStyle = color;
-            this.context.fillRect(x, y, width, height);
-
-            this.appendText(this.scratchText);
-
-            this.context.globalCompositeOperation = "destination-out";
+            this.fill(background, x, y, width, height, color);
 
             this.bind();
         }
@@ -266,8 +285,18 @@
 
                 return this;
             },
-            "paintImage" : function(background, frontimage, x, y, width, height){
-                _sc.paintImage(background, frontimage, x, y, width, height);
+            "clean" : function(){
+                _sc.clean();
+
+                return this;
+            },
+            "setAlpha" : function(alpha){
+                _sc.setAlpha(alpha);
+
+                return this;
+            },
+            "paintImage" : function(background, frontimage, x, y, width, height, imgX, imgY, imgWidth, imgHeight){
+                _sc.paintImage(background, frontimage, x, y, width, height, imgX, imgY, imgWidth, imgHeight);
             },
             "paintColor" : function(background, color, x, y, width, height){
                 _sc.paintColor(background, color, x, y, width, height);

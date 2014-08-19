@@ -32,8 +32,8 @@
             var ins = this;
 
             img.onload = function(){
-                ctx.clearRect(_x, _y, _w, _h);
-                ctx.drawImage(img, _x, _y);
+                ctx.clearRect(_x, _y, stage.width, stage.height);
+                ctx.drawImage(img, _x, _y, _w, _h);
 
                 Util.execAfterMergerHandler(handler, [stage, ctx, ins.readImageData(_x, _y, _w, _h), _x, _y, _w, _h]);
             }
