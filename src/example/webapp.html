@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<!--
+  data-mode="drawcard|waterfall"
+  data-scroll="vertical|horizontal"
+  data-widget-mode="noce|everytime"
+-->
+<html class="webapp" data-mode="waterfall" data-scroll="vertical" id="webapp">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, minimal-ui" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="format-detection"content="telephone=no, email=no" />
+  <title>Web App</title>
+  <link rel="stylesheet" type="text/css" href="/css/g.css">
+</head>
+<body>
+<article class="webapp-view" id="view">
+  <div class="webapp-modules">
+    <section style="background-color:red">
+      M 1
+      <div data-widget="fadein::opacity:0,1@500,0#3,ease-in-out" style="opacity:0">hello world</div>
+      <div data-widget="flyin::left:0px,200px;opacity:0,1@400,0#1,ease" style="position:absolute; left:0; top:300px; opacity:0;">i am coming...</div>
+      <div data-widget="rotation::rotate:0,360,50%,50%@1000,0>rotate:-360,0,50%,50%@0,0#cycle,linear" style="position:absolute; left:40px; top:80px; width:40px; height:40px; background:#fff; text-align:center; line-heihgt:40px; font-size:28px;">A</div>
+      <div style="height:350px"></div>
+    </section>
+    <section style="background-color:green">M 2
+      <div data-widget="fadein::opacity:0,1@500,0#1,ease" style="opacity:0">hello world2</div>
+      <div style="height:200"></div>
+    </section>
+    <section style="background-color:blue">M 3
+      <div style="height:450px"></div>
+    </section>
+    <section style="background-color:gray">M 4
+      <div style="height:300px"></div>
+    </section>
+    <section style="background-color:yellow">M 5
+      <div style="height:100px"></div>
+      <div data-widget="flyin::left:0px,200px;opacity:0,1@400,0#1,ease" style="position:absolute; left:0; top:20px; opacity:0;">i am coming...</div>
+    </section>
+    <section style="background-color:pink">M 6
+      <div style="height:180px"></div>
+    </section>
+  </div>
+</article>
+<header class="webapp-header" id="header">Web App</header>
+<footer class="webapp-footer" id="footer">&copy; 2014</footer>
+<script src="/js/lib/zepto-1.1.4.js"></script>
+<script src="/js/lib/sea-2.3.0.js"></script>
+<script src="/js/lib/se.js"></script>
+<script>
+seajs.use(["logic/webapp"], function(logic){
+  // body...
+});
+</script>
+</body>
+</html>

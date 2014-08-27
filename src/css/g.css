@@ -124,7 +124,7 @@ input[type=button] {width: auto; overflow: visible;}
 .clearfix { zoom: 1; }  
 
 /* global css for seshenghuo.com*/
-html{font-size:12px; font-family: "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif; background-color:#DFDFDF;}
+html{font-size:12px; font-family: "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif; background-color:#FFF;}
 html,body,div,p,figcaption,figure,time,address,span{
     -webkit-font-smoothing:antialiased;
 }
@@ -551,3 +551,16 @@ a.on{color:#000; text-decoration:none;}
     color: #666;
 }
 /*************************************/
+.webapp{}
+.webapp.mode-drawcard{}
+.webapp.mode-waterfall{}
+
+.webapp-header{height: 45px; width: 100%; line-height: 45px; font-size: 18px; position: absolute; left: 0; top: 0; z-index: 2; background-color: #000; color: #fff; overflow: hidden; text-align: center;}
+.webapp-footer{height: 45px; width: 100%; line-height: 45px; font-size: 14px; position: absolute; left: 0; bottom: 0; z-index: 2; background-color: #333; color: #fff; overflow: hidden; text-align: center;}
+.webapp-view{height: 100%; width: 100%; position: absolute; left: 0; top: 45px; bottom: 45px; z-index: 1; overflow: hidden;}
+    .webapp-view.none-header{top: 0;}
+        .webapp-view.none-header~.webapp-header{display: none;}
+    .webapp-view.none-footer{bottom: 0;}    
+        .webapp-view.none-footer~.webapp-footer{display: none;}
+.webapp-modules{}
+    .webapp-modules section{position: relative; overflow: hidden;}

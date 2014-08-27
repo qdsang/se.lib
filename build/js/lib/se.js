@@ -1,1 +1,1 @@
-seajs.config({base:"./js/"});
+seajs.config({base:"/js/"});
