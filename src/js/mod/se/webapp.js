@@ -9,10 +9,11 @@
  * @date 2014.8
  */
 ;define(function WebApp(require, exports, module){
-                    require("lib/extra/iscroll5/iscroll");
-                    require("mod/zepto/fx");
-                    require("mod/se/raf");
-    var Listener  = require("mod/se/listener");
+                        require("lib/extra/iscroll5/iscroll");
+                        require("mod/zepto/fx");
+                        require("mod/se/raf");
+    var Listener      = require("mod/se/listener");
+    var Util = $.Util = require("mod/se/util");
 
     var iScroll = window.IScroll;
 
@@ -120,12 +121,15 @@
                         x = result[5];
                         y = result[7];
 
-                        o.normal["transformOrigin"] = o.restore["transformOrigin"] = x + " " + y;
+                        var tokey = Util.getStylePrefix("transformOrigin");
+
+                        o.normal[tokey] = o.restore[tokey] = x + " " + y;
                     }
 
                     if("rotate" == property){
-                        o.normal["transform"] = "rotate(" + end + "deg)";
-                        o.restore["transform"] = "rotate(" + start + "deg)";
+                        var tkey = Util.getStylePrefix("transform");
+                        o.normal[tkey] = "rotate(" + end + "deg)";
+                        o.restore[tkey] = "rotate(" + start + "deg)";
                     }else{
                         o.normal[property] = end;
                         o.restore[property] = start;
