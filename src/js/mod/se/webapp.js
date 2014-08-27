@@ -244,6 +244,7 @@
         this.fps = 0;
         this.moduleSnap = [];
         this.snapRangeOffset = 20;
+        this.snapSpeed = 400;
 
         this.listener = new Listener({
             oninit : null,         //初始化时的回调{Function callback, Array args, Object context}
@@ -512,7 +513,7 @@
             _ins.initViewport({
                 momentum: false,
                 snap: "section",
-                snapSpeed: 400,
+                snapSpeed: _ins.snapSpeed,
                 mouseWheel: false
             });
 
@@ -606,6 +607,11 @@
                 },
                 "setFPS" : function(fps){
                     app.setFPS(fps);
+
+                    return this;
+                },
+                "setSnapSpeed" : function(speed){
+                    app.snapSpeed = speed;
 
                     return this;
                 },
