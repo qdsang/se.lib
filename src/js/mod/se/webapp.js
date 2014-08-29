@@ -58,6 +58,10 @@
             //旋转(rotation)              rotation::rotate:0,360,50%,50%@1000,0>rotate:-360,0,50%,50%@0,0#cycle,linear
             //摇摆                        swing::rotate:210,150,50%,0@200,0>rotate:150,210,50%,0@200,0#cycle,ease
             //data-widget:= action::property:start,end;property:start,end@duration,delay>property:start,end@duration,delay#times,easing
+            //move::
+            //zoom::
+            //rotate::
+            //fade::
             var s = this.source;
             var group = s.split("::");
             var action = group[0];
