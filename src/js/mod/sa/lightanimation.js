@@ -372,6 +372,8 @@
                         + animate.join(";");
 
                 this.runtimeStyle = this.domNode.style.cssText = css;        
+            }else{
+                this.exec("complete", [this.target]);
             }
         },
         play : function(){
