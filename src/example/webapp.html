@@ -4,7 +4,7 @@
   data-scroll="vertical|horizontal"
   data-widget-mode="noce|everytime"
 -->
-<html class="webapp" data-mode="waterfall" data-scroll="vertical" id="webapp">
+<html class="webapp" data-mode="drawcard" data-scroll="vertical" data-widget-mode="everytime" id="webapp">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, minimal-ui" />
@@ -13,19 +13,39 @@
   <meta name="format-detection"content="telephone=no, email=no" />
   <title>Web App</title>
   <link rel="stylesheet" type="text/css" href="/css/g.css">
+  <style type="text/css">
+  @-webkit-keyframes rotate{
+    from {
+      -webkit-transform: rotate(0deg);
+    }
+    to {
+      -webkit-transform: rotate(360deg);
+    }
+  }
+  @keyframes rotate{
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  </style>
 </head>
 <body>
 <article class="webapp-view" id="view">
   <div class="webapp-modules">
     <section style="background-color:red">
       M 1
-      <div data-widget="fadein::opacity:0,1@500,0#3,ease-in-out" style="opacity:0">hello world</div>
-      <div data-widget="flyin::left:0px,200px;opacity:0,1@400,0#1,ease" style="position:absolute; left:0; top:300px; opacity:0;">i am coming...</div>
-      <div data-widget="rotation::rotate:0,360,50%,50%@1000,0>rotate:-360,0,50%,50%@0,0#cycle,linear" style="position:absolute; left:40px; top:80px; width:40px; height:40px; background:#fff; text-align:center; line-heihgt:40px; font-size:28px;">A</div>
+      <div data-widget="transition::opacity:1!1s ease 1s" style="opacity:0">hello world</div>
+      <div data-widget="transition::translate3d:200px,30px,0px!1s ease 1s;opacity:1!0.4s ease" style="transform:translate3d(0px,30px,0px);opacity:0;">i am coming...</div>
+      <div data-widget="transition::translate3d:100px,200px,0px!1s ease>scale:0.5,0.5!0.5s ease" style="transform:translate3d(0,0,0) scale(1,1); width:40px; height:40px; ">
+        <div data-widget="animation::rotate:!1s linear infinite normal" style="transform:rotate(0); width:40px; height:40px; background:#fff; text-align:center; line-heihgt:40px; font-size:28px;">A</div>
+      </div>
       <div style="height:350px"></div>
     </section>
     <section style="background-color:green">M 2
-      <div data-widget="fadein::opacity:0,1@500,0#1,ease" style="opacity:0">hello world2</div>
+      
       <div style="height:200"></div>
     </section>
     <section style="background-color:blue">M 3
@@ -36,7 +56,7 @@
     </section>
     <section style="background-color:yellow">M 5
       <div style="height:100px"></div>
-      <div data-widget="flyin::left:0px,200px;opacity:0,1@400,0#1,ease" style="position:absolute; left:0; top:20px; opacity:0;">i am coming...</div>
+      
     </section>
     <section style="background-color:pink">M 6
       <div style="height:180px"></div>

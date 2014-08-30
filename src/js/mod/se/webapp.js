@@ -14,6 +14,7 @@
                         require("mod/se/raf");
     var Listener      = require("mod/se/listener");
     var Util = $.Util = require("mod/se/util");
+    var LA            = require("mod/sa/lightanimation");
 
     var iScroll = window.IScroll;
 
@@ -37,174 +38,29 @@
         this.module = module;
         this.widget = widget;
         this.source = data;
-        this.times = 1; //number|cycle
-        this.current = 0;
-        this.animation = null;
-        //ease(逐渐变慢) | linear(匀速) | ease-in(加速) | ease-out(减速) | ease-in-out(先加速然后减速) | cubic-bezier(该值允许你去自定义一个时间曲线)(number, number, number, number>)
-        this.easing = "ease";
-        this.tid = null;
 
-        this.queue = this.parse();
+        this.effect = this.createAnimate(data);
     };
 
     Widget.prototype = {
-        parse : function(){
-            //飞入(flyin)                 flyin::left:0,100;opacity:0,1@200,0#1,ease
-            //飞出(flyout)                flyout::left:100,0;opacity:1,0@200,0#1,ease
-            //淡入(fadein)                fadein::opacity:0,1@200,0#1,ease
-            //淡出(fadeout)               fadeout::opacity:1,0@200,0#1,ease
-            //闪动(flash)                 flash::opacity:0,1@200,0>opacity:1,0@200,0#3,ease
-            //呼吸灯                      breath::opacity:0,1@200,0>opacity:1,0@200,0#cycle,ease
-            //旋转(rotation)              rotation::rotate:0,360,50%,50%@1000,0>rotate:-360,0,50%,50%@0,0#cycle,linear
-            //摇摆                        swing::rotate:210,150,50%,0@200,0>rotate:150,210,50%,0@200,0#cycle,ease
-            //data-widget:= action::property:start,end;property:start,end@duration,delay>property:start,end@duration,delay#times,easing
-            //move::
-            //zoom::
-            //rotate::
-            //fade::
-            var s = this.source;
-            var group = s.split("::");
-            var action = group[0];
-            var param = group[1];
-            var hashIndex = param.indexOf("#");
-            var properties = hashIndex > -1 ? param.substring(0, hashIndex) : param;
-            var hash = hashIndex > -1 ? param.substring(hashIndex + 1) : 1;
-            var hashItems = hash.split(",");
-            var times = hashItems[0];
-            var easing = hashItems[1] || "ease";
-            var queue = [];
-            var list = properties.split(">");
-            var size = list.length;
-            var item = null;
+        createAnimate : function(effect){
+            var la = LA.newInstance(this.widget, effect);
 
-            for(var i = 0; i < size; i++){
-                queue.push(this.parseProperties(list[i]));
-            }
-
-            this.times = times;
-            this.animation = action;
-            this.easing = easing;
-
-            return queue;
-        },
-        parseProperties : function(properties){
-            var tmps = properties.split("@");
-            var s1 = tmps[0];
-            var s2 = tmps[1];
-            var runtime = s2.split(",");
-            var group = s1.split(";");
-            var size = group.length;
-            var pattern = /^([a-zA-Z]+):([a-zA-Z0-9%\(\)\.\-_]+),([a-zA-Z0-9%\(\)\.\-_]+)(,([a-zA-Z0-9%\(\)\.\-_]+))?(,([a-zA-Z0-9%\(\)\.\-_]+))?$/g;
-            var result = null;
-            var item = null;
-            var property = null
-            var start = null;
-            var end = null;
-            var x = "50%";
-            var y = "50%";
-
-            var o = {
-                widget : this.widget,
-                runtime : {
-                    "duration": Number(runtime[0]),
-                    "delay": Math.max(Number(runtime[1]), 0)
+            la.set("complete", {
+                callback : function(target){
+                    this.app.exec("widget", [this.module, this.widget]);
                 },
-                normal : {},
-                restore : {}
-            };
+                context : this
+            });
 
-            for(var i = 0; i < size; i++){
-                item = group[i];
-
-                while(null != (result = pattern.exec(item))){
-                    property = result[1];
-                    start = result[2];
-                    end = result[3];
-
-                    if(undefined !== result[5] && undefined !== result[7]){
-                        x = result[5];
-                        y = result[7];
-
-                        var tokey = Util.getStylePrefix("transformOrigin");
-
-                        o.normal[tokey] = o.restore[tokey] = x + " " + y;
-                    }
-
-                    if("rotate" == property){
-                        var tkey = Util.getStylePrefix("transform");
-                        o.normal[tkey] = "rotate(" + end + "deg)";
-                        o.restore[tkey] = "rotate(" + start + "deg)";
-                    }else{
-                        o.normal[property] = end;
-                        o.restore[property] = start;
-                    }       
-                }
-            }
-
-            return o;
-        },
-        animate : function(key, index, queue, app, interval){
-            var conf = queue[index];
-            var nextIndex = ("normal" == key ? index + 1 : index - 1);
-            var next = !!queue[nextIndex];
-            var widget = conf.widget;
-            var runtime = conf.runtime;
-            var opts = conf[key];
-            var _ins = this;
-
-            var doNext = function(){
-                app.exec("widget", [_ins.module, widget, key, next]);
-
-                if(next){
-                    _ins.animate(key, nextIndex, queue, app, interval);
-                }else{
-                    if(true === interval && ("cycle" == _ins.times || (Number(_ins.times) > 1 && _ins.current <= Number(_ins.times)))){
-
-                        _ins.current++;
-
-                        if("normal" == key){
-                            _ins.animate("restore", queue.length - 1, queue, app, interval);
-                            //_ins.animate("normal", 0, queue, app, interval);
-                        }else{
-                            _ins.animate("normal", 0, queue, app, interval);
-                        }
-                    }
-                }
-            };
-
-            var _ani = function(){
-                if(runtime.duration <= 0){
-                    widget.css(opts);
-                    doNext();
-                    return;
-                }
-                widget.animate(opts, runtime.duration, _ins.easing, function(){
-                    doNext();
-                });   
-            };
-
-            if(runtime.delay > 0){
-                _ins.tid = setTimeout(_ani, runtime.delay);
-            }else{
-                _ani();
-            }
+            return la;
         },
         next : function(){
-            var _ins = this;
-
-            _ins.current = 0;
-            _ins.animate("normal", 0, _ins.queue, _ins.app, true);
+            this.effect.play();
+            
         },
         restore : function(){
-            var _ins = this;  
-
-            if(_ins.tid){
-                clearTimeout(_ins.tid);
-                _ins.tid = null;
-            }
-
-            _ins.current = 0;
-            _ins.animate("restore", _ins.queue.length - 1, _ins.queue, _ins.app, false);
+            this.effect.reset();
         }
     };
 
@@ -438,7 +294,7 @@
             var key = String(index);
 
             if(!_ins.widgets[key]){
-                widgets = module.children('[data-widget]');
+                widgets = module.find('[data-widget]');
 
                 _ins.widgets[key] = [];
                 $.each(widgets, function(i, widget){
@@ -582,7 +438,7 @@
             _ins.moduleSize = _ins.modules.length;
             _ins.mode = _ins.app.attr("data-mode") || MODE.WATERFALL;
             _ins.scroll = _ins.app.attr("data-scroll") || SCROLL.VERTICAL;
-            _ins.widgetMode = WIDGET_MODE.ONCE; //_ins.app.attr("data-widget-mode") || WIDGET_MODE.ONCE;
+            _ins.widgetMode = _ins.app.attr("data-widget-mode") || WIDGET_MODE.ONCE;
 
             _ins.createViewport();
             _ins.enterframe();

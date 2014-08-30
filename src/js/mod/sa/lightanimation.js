@@ -377,10 +377,13 @@
             }
         },
         play : function(){
-            this.domNode.style.cssText = this.runtimeStyle = this.backupStyle;
-            this.current = 0;
+            this.reset();
 
             this.__play__();
+        },
+        reset : function(){
+            this.domNode.style.cssText = this.runtimeStyle = this.backupStyle;
+            this.current = 0;
         }
     };
 
@@ -406,6 +409,13 @@
                 },
                 "play" : function(){
                     la.play();
+
+                    return this;
+                },
+                "reset" : function(){
+                    la.reset();
+
+                    return this;
                 }
             }
         }
