@@ -343,6 +343,7 @@
             var opt = {
                 mouseWheel: true,
                 scrollbars: false,
+                click: true,
                 scrollX: (SCROLL.HORIZONTAL == _ins.scroll),
                 scrollY: (SCROLL.VERTICAL == _ins.scroll)
             };
