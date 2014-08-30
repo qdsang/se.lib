@@ -11,7 +11,6 @@
  */
 ;define(function WebApp(require, exports, module){
                         require("lib/extra/iscroll5/iscroll");
-                        require("mod/zepto/fx");
                         require("mod/se/raf");
     var Listener      = require("mod/se/listener");
     var Util = $.Util = require("mod/se/util");
