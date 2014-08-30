@@ -6,6 +6,7 @@
  * 图片处理模块
  * @charset utf-8
  * @author lijun
+ * @git: https://github.com/zwlijun/se.lib
  * @date 2014.7
  */
 ;define(function (require, exports, module){

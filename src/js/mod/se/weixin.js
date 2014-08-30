@@ -6,6 +6,7 @@
  * 微信模块
  * @charset utf-8
  * @author lijun
+ * @git: https://github.com/zwlijun/se.lib
  * @date 2014.4
  */
 ;define(function Weixin(require, exports, module){

@@ -6,6 +6,7 @@
  * 日期工具模块
  * @charset utf-8
  * @author lijun
+ * @git: https://github.com/zwlijun/se.lib
  * @date 2014.4
  */
 ;define(function DateUtil(require, exports, module) {
