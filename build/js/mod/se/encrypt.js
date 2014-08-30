@@ -1,2 +1,2 @@
-/*! Copyright (c) SESHENGHUO.COM - Author: LIJUN - Email: zwlijun@gmail.com */
+/*! Copyright (c) SESHENGHUO.COM - Author: LIJUN - Email: zwlijun@gmail.com - Git: https://github.com/zwlijun/se.lib */
 define(function(require,exports,module){$.Request=require("mod/se/request");var a=function(a){var b=a.key||"Data",c=a.origin,d=a.type||"rsa",e=a.delay||0,f=a.crossdomain||!1,g=a.before||null,h=a.success||null,i=a.error||null,j=a.timeout||null,k=a.runtime||null,l=a.complete||null;$.Request.head({url:"/jbin/encrypt",delay:e,crossdomain:f,heads:[{name:"X-Encrypt-Origin",value:c},{name:"X-Encrypt-Key",value:b},{name:"X-Encrypt-Type",value:d||"rsa"}],before:g,success:h,error:i,timeout:j,complete:l,runtime:k})};module.exports={encrypt:a}});

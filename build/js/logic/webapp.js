@@ -1,2 +1,2 @@
-/*! Copyright (c) SESHENGHUO.COM - Author: LIJUN - Email: zwlijun@gmail.com */
+/*! Copyright (c) SESHENGHUO.COM - Author: LIJUN - Email: zwlijun@gmail.com - Git: https://github.com/zwlijun/se.lib */
 define(function(require){var a=require("mod/se/webapp"),b=a.newInstance("webapp","view","header","footer");b.set("init",{callback:function(){"drawcard"==b.mode?b.showModuleWidget(b.getCurrentModuleIndex()):b.displayViewportWidget()}}),b.create()});
