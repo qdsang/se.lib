@@ -11,6 +11,7 @@
  */
 ;define(function (require, exports, module){
     var ImageUtil = require("mod/sa/image");
+    var Brush     = require("mod/sa/paintbrush/fuzzyedgepencil");
     var Util      = $.Util;
 
     var ScratchCard = function(canvas){
@@ -28,14 +29,15 @@
         this.touched = false;
         this.offsetX = this.stage.offsetLeft;
         this.offsetY = this.stage.offsetTop;
-        this.brushSize = 5;
-        this.blurRadius = 40;
+        this.brushSize = 10;
+        this.blurRadius = 20;
         this.ready = null;
         this.begin = null;
         this.processing = null;
         this.complete = null;
         this.scratchText = null;
         this.alpha = 1;
+        this.brush = Brush.createPaintBrush(canvas);
 
         this.setStageStyle("background-color", "transparent");
     };
@@ -43,67 +45,6 @@
     ScratchCard.prototype = {
         setStageStyle : function(name, property){
             $(this.stage).css(name, property);
-        },
-        start : function(e){                 
-            e.preventDefault();
-            e.stopPropagation();
-
-            var offset = $(this.stage).offset();
-            this.offsetX = offset.left;
-            this.offsetY = offset.top;
-
-            var data = this;
-            data.touched = true;
-
-            Util.execAfterMergerHandler(data.begin, []);
-        },
-        end : function(e){                 
-            e.preventDefault();
-            e.stopPropagation();
-
-            var data = this;
-            data.touched = false;
-
-            var pixel = data.context.getImageData(data.x, data.y, data.width, data.height).data;
-
-            for(var i = 0, removed = 0, remain = 0, size = pixel.length; i < size; i += 4){
-                if(pixel[i] && pixel[i + 1] && pixel[i + 2] && pixel[i + 3]){
-                    remain++;
-                }else{
-                    removed++;
-                }
-            }
-
-            Util.execAfterMergerHandler(data.complete, [remain, removed]);
-        },
-        move : function(e){                 
-            e.preventDefault();
-            e.stopPropagation();
-
-            var data = this;
-
-            if(data.touched){                     
-                if(e.changedTouches){                         
-                    e = e.changedTouches[e.changedTouches.length - 1];
-                }                     
-                var x = (e.clientX + document.body.scrollLeft || e.pageX) - data.offsetX || 0;
-                var y = (e.clientY + document.body.scrollTop || e.pageY) - data.offsetY || 0;
-
-                console.info("e.clientX: " + e.clientX);
-                console.info("e.clientY: " + e.clientY);
-                console.info("e.pageX: " + e.pageX);
-                console.info("e.pageY: " + e.pageY);
-                console.info("data.offsetX: " + data.offsetX);
-                console.info("data.offsetY: " + data.offsetY);
-                console.info("body.scrollLeft: " + document.body.scrollLeft);
-                console.info("body.scrollTop: " + document.body.scrollTop);
-
-                Util.execAfterMergerHandler(data.processing, [x, y]);
-
-                data.context.beginPath()
-                data.context.arc(x, y, data.brushSize, 0, Math.PI * 2);
-                data.context.fill();
-            }             
         },
         mask : function(width, height){
             var canvas = document.createElement("canvas");
@@ -151,32 +92,61 @@
             ctx.fillText(t.text, t.x, t.y);
         },
         bind : function(){
-            var o = this.stage;
             var ins = this;
+            var brush =  ins.brush;
+            var base = brush.brush;
+            var o = ins.stage;
 
             Util.execAfterMergerHandler(ins.ready, []);
 
-            if(Util.CLICK_EVENT == "tap"){
-                o.addEventListener("touchstart", function(e){
-                    ins.start(e);
-                }, false);
-                o.addEventListener("touchmove", function(e){
-                    ins.move(e);
-                }, false);
-                o.addEventListener("touchend", function(e){
-                    ins.end(e);
-                }, false);
-            }else{
-                o.addEventListener("mousedown", function(e){
-                    ins.start(e);
-                }, false);
-                o.addEventListener("mousemove", function(e){
-                    ins.move(e);
-                }, false);
-                o.addEventListener("mouseup", function(e){
-                    ins.end(e);
-                }, false);
-            }
+            base.setLineWidth(ins.brushSize);
+            base.addColor(1, "#000");
+            base.setShadowBlur(ins.blurRadius);
+            base.setShadowColor("#000");
+
+            brush.set("start", {
+                "callback": function(e, brush){
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    Util.execAfterMergerHandler(this.begin, []);
+                },
+                context: this
+            });
+
+            brush.set("end", {
+                "callback": function(e, brush){
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    var ins = this;
+                    var ctx = ins.context;
+                    var pixel = ctx.getImageData(ins.x, ins.y, ins.width, ins.height).data;
+
+                    for(var i = 0, removed = 0, remain = 0, size = pixel.length; i < size; i += 4){
+                        if(pixel[i] && pixel[i + 1] && pixel[i + 2] && pixel[i + 3]){
+                            remain++;
+                        }else{
+                            removed++;
+                        }
+                    }
+
+                    Util.execAfterMergerHandler(ins.complete, [remain, removed]);
+                },
+                context: this
+            });
+
+            brush.set("drawing", {
+                "callback": function(e, brush){
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    var pointer = brush.getPointerPosition(e);
+
+                    Util.execAfterMergerHandler(this.processing, [pointer.x, pointer.y]);
+                },
+                context: this
+            });
         },
         clean : function(){
             var ctx = this.context;

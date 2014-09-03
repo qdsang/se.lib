@@ -349,7 +349,7 @@
             };
 
             _ins.viewport = new iScroll(this.view[0], $.extend(opt, options));
-            //_ins.preventTouchMove();
+            _ins.preventTouchMove();
             _ins.viewport.refresh();
         },
         createWaterfallViewport : function(){
