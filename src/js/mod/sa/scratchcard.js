@@ -30,7 +30,8 @@
         this.offsetX = this.stage.offsetLeft;
         this.offsetY = this.stage.offsetTop;
         this.brushSize = 10;
-        this.blurRadius = 20;
+        this.blurRadius = 40;
+        this.shadowBlur = 20;
         this.ready = null;
         this.begin = null;
         this.processing = null;
@@ -62,6 +63,9 @@
         },
         setBlurRadius : function(radius){
             this.blurRadius = radius;
+        },
+        setShadowBlur : function(blur){
+            this.shadowBlur = blur;
         },
         setReady : function(handler){
             this.ready = handler;
@@ -101,7 +105,7 @@
 
             base.setLineWidth(ins.brushSize);
             base.addColor(1, "#000");
-            base.setShadowBlur(ins.blurRadius);
+            base.setShadowBlur(ins.shadowBlur);
             base.setShadowColor("#000");
 
             brush.set("start", {
@@ -223,6 +227,11 @@
         var pub = {
             "setBlurRadius" : function(radius){
                 _sc.setBlurRadius(radius);
+
+                return this;
+            },
+            "setShadowBlur" : function(blur){
+                _sc.setShadowBlur(blur);
 
                 return this;
             },
