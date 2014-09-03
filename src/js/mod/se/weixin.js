@@ -306,7 +306,7 @@
         },
         /**
          * 调用微信转账（需授权）
-         * @param Object options{
+         * @param Object data{
          *     String appId, 公众号ID
          *     String timeStamp, 时间戳
          *     String nonceStr,  随机字符串
@@ -316,7 +316,7 @@
          * }
          * @param Object handlerMap 回调句柄 {Handler success, Handler fail, Handler cancel, Handler error}
          */
-        "tranfer" : function(){
+        "tranfer" : function(data, handlerMap){
             CallWeiXinAPI(function(){
                 var requireData = {"appId":"","timeStamp":"","nonceStr":"","package":"","signType":"","paySign":""};
                 var map = handlerMap || {};                
