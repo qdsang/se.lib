@@ -10,16 +10,18 @@
  * @date 2014.8
  */
 ;define(function WebApp(require, exports, module){
-                        require("lib/extra/iscroll5/iscroll");
+                        require("lib/extra/iscroll5/iscroll-probe");
                         require("mod/se/raf");
     var Listener      = require("mod/se/listener");
     var Util = $.Util = require("mod/se/util");
     var LA            = require("mod/sa/lightanimation");
+    var ST            = require("mod/sa/scenetransitions");
 
     var iScroll = window.IScroll;
 
     var MODE = {
         "DRAWCARD": "drawcard",
+        "SCREEN": "screen",
         "WATERFALL": "waterfall"
     };
 
@@ -90,6 +92,7 @@
             oFooter = null;
         }
 
+        this.root = $("html");
         this.appId = appId;
         this.viewId = viewId;
         this.headerId = headerId;
@@ -102,21 +105,27 @@
         this.moduleSize = 0;
         this.widgets = {};
         this.viewport = null;
-        this.mode = MODE.WATERFALL;
+        this.mode = MODE.SCREEN;
         this.scroll = SCROLL.VERTICAL;
         this.widgetMode = WIDGET_MODE.ONCE;
         this.fps = 0;
         this.moduleSnap = [];
         this.snapRangeOffset = 20;
         this.snapSpeed = 400;
+        this.sceneDeg = 28;
+        this.sceneDuration = .28;
+        this.scenePerspective = "300px";
 
         this.listener = new Listener({
-            oninit : null,         //初始化时的回调{Function callback, Array args, Object context}
-            onbefore : null,       //滑动前{Function callback, Array args, Object context}
-            onbegin : null,        //滑动开始{Function callback, Array args, Object context}
-            onend : null,          //滑动结束{Function callback, Array args, Object context}
-            onwidget : null,       //widget完成{Function callback, Array args, Object context}
-            onenterframe : null    //enterframe回调{Function callback, Array args, Object context}
+            oninit : null,              //初始化时的回调{Function callback, Array args, Object context}
+            onbefore : null,             //滑动前{Function callback, Array args, Object context}
+            onbegin : null,              //滑动开始{Function callback, Array args, Object context}
+            onscrolling : null,           //滑动中{Function callback, Array args, Object context}
+            onend : null,                //滑动结束{Function callback, Array args, Object context}
+            onwidget : null,              //widget完成{Function callback, Array args, Object context}
+            onresize : null,              //窗口大小重置{Function callback, Array args, Object context}
+            onorientationchange : null,   //横竖屏切换
+            onenterframe : null          //enterframe回调{Function callback, Array args, Object context}
         });
     };
 
@@ -165,16 +174,17 @@
         calcModulePanelOffset : function(){
             var mp = $(".webapp-modules");
             var mpo = mp.offset();
+            var vo = this.view.offset();
 
             mp.css({
-                width: mpo.width + "px",
-                height: mpo.height + "px"
+                width: (mpo.width || vo.width) + "px",
+                height: (mpo.height || vo.height) + "px"
             });
 
             mp.attr("data-x", mpo.left)
               .attr("data-y", mpo.top)
-              .attr("data-width", mpo.width)
-              .attr("data-height", mpo.height);
+              .attr("data-width", (mpo.width || vo.width))
+              .attr("data-height", (mpo.height || vo.height));
         },
         calcModuleOffset : function(){
             var _ins = this;
@@ -214,6 +224,13 @@
                 "width": w + "px",
                 "height": h + "px"
             });
+
+            var offset = this.view.offset();
+
+            this.view.attr("data-x", offset.left)
+                     .attr("data-y", offset.top)
+                     .attr("data-width", offset.width)
+                     .attr("data-height", offset.height);
         },
         adjusted : function(){
             var w = window.innerWidth;
@@ -343,6 +360,7 @@
             var opt = {
                 mouseWheel: true,
                 scrollbars: false,
+                probeType: 3,
                 click: true,
                 scrollX: (SCROLL.HORIZONTAL == _ins.scroll),
                 scrollY: (SCROLL.VERTICAL == _ins.scroll)
@@ -357,7 +375,9 @@
 
             _ins.calcModuleOffset();
             _ins.calcModulePanelOffset();
-            _ins.initViewport({});
+            _ins.initViewport({
+                probeType: 1
+            });
 
             _ins.viewport.on("beforeScrollStart", function(){
                 _ins.exec("before", [_ins.viewport]);
@@ -365,18 +385,22 @@
             _ins.viewport.on("scrollStart", function(){
                 _ins.exec("start", [_ins.viewport]);
             });
+            _ins.viewport.on("scroll", function(){
+                _ins.exec("scrolling", [_ins.viewport]);
+            });
             _ins.viewport.on("scrollEnd", function(){
                 _ins.displayViewportWidget();
                 _ins.exec("end", [_ins.viewport]);
             });
         },
-        createDrawCardViewport : function(){
+        createSingleScreenViewport : function(){
             var _ins = this;
             var _prepage = -1;
 
             _ins.adjusted();
             _ins.initViewport({
                 momentum: false,
+                probeType: 1,
                 snap: "section",
                 snapSpeed: _ins.snapSpeed,
                 mouseWheel: false
@@ -391,13 +415,71 @@
                 _ins.exec("start", [_ins.viewport]);
             });
             _ins.viewport.on("scroll", function(){
-                _ins.exec("scroll", [_ins.viewport]);
+                _ins.exec("scrolling", [_ins.viewport]);
             });
             _ins.viewport.on("scrollEnd", function(){
                 _ins.showModuleWidget(_ins.getCurrentModuleIndex());
 
                 _ins.exec("end", [_ins.viewport]);
             });
+        },
+        createDrawCardViewport : function(){
+            var _ins = this;
+            var _prepage = -1;
+
+            var st = null;
+
+            _ins.adjusted();
+            _ins.initViewport({
+                momentum: false,
+                probeType: 3,
+                snap: "section",
+                snapSpeed: _ins.snapSpeed,
+                mouseWheel: false
+            });
+
+            st = ST.newInstance("section", TransitionEffect.ROTATE, _ins.scroll);
+            st.setDeg(_ins.sceneDeg);
+            st.setDuration(_ins.sceneDuration);
+            st.setPerspective(_ins.scenePerspective);
+            st.set("start", {
+                callback: function(e, x, y, target, index){
+                    _ins.restoreModuleWidget(index);
+                    this.exec("start", [this.viewport]);
+                },
+                context: _ins
+            });
+            st.set("drawing", {
+                callback: function(e, x, y, target, index){
+                    this.exec("scrolling", [this.viewport]);
+                },
+                context: _ins
+            });
+            st.set("complete", {
+                callback: function(e, index){
+                    _ins.showModuleWidget(index);
+                    this.exec("end", [this.viewport]);
+                },
+                context: _ins
+            });
+
+            // _ins.viewport.on("beforeScrollStart", function(){
+            //     _ins.exec("before", [_ins.viewport]);
+            // });
+            // _ins.viewport.on("scrollStart", function(){
+            //     _ins.restoreModuleWidget(_ins.getCurrentModuleIndex());
+
+            //     _ins.exec("start", [_ins.viewport]);
+            // });
+            // _ins.viewport.on("scroll", function(){
+            //     console.info(this.x + "/" + this.y)
+            //     _ins.exec("scrolling", [_ins.viewport]);
+            // });
+            // _ins.viewport.on("scrollEnd", function(){
+            //     _ins.showModuleWidget(_ins.getCurrentModuleIndex());
+
+            //     _ins.exec("end", [_ins.viewport]);
+            // });
         },
         createViewport : function(){
             var _ins = this;
@@ -411,10 +493,36 @@
                 case MODE.DRAWCARD:
                     _ins.createDrawCardViewport();
                 break;
+                case MODE.SCREEN:
+                    _ins.createSingleScreenViewport();
+                break;
                 default:
                     throw new Error("Unkonwn View Mode(" + _ins.mode + ")");
                 break;
             }
+        },
+        resize : function(){
+            var _ins = this;
+
+            _ins.calcViewportOffset();
+
+            switch(_ins.mode){
+                case MODE.WATERFALL:
+                    _ins.calcModuleOffset();
+                    _ins.calcModulePanelOffset();
+                break;
+                case MODE.DRAWCARD:
+                    _ins.adjusted();
+                break;
+                case MODE.SCREEN:
+                    _ins.adjusted();
+                break;
+                default:
+                    throw new Error("Unkonwn View Mode(" + _ins.mode + ")");
+                break;
+            }
+
+            _ins.viewport.refresh();
         },
         enterframe : function(){
             var _ins = this;
@@ -432,17 +540,34 @@
                 }
             })
         },
+        setAppMode : function(){
+            var root = this.root;
+
+            root.removeClass();
+            root.addClass("webapp mode-" + this.mode);
+        },
         init : function(){
             var _ins = this;
 
             _ins.modules = $(".webapp-modules section");
             _ins.moduleSize = _ins.modules.length;
-            _ins.mode = _ins.app.attr("data-mode") || MODE.WATERFALL;
+            _ins.mode = _ins.app.attr("data-mode") || MODE.SCREEN;
             _ins.scroll = _ins.app.attr("data-scroll") || SCROLL.VERTICAL;
             _ins.widgetMode = _ins.app.attr("data-widget-mode") || WIDGET_MODE.ONCE;
 
+            _ins.setAppMode();
             _ins.createViewport();
             _ins.enterframe();
+
+            $(window).on("resize", "", _ins, function(e){
+                var data = e.data;
+                data.resize();
+                data.exec("resize", []);
+            }).on("orientationchange", "", _ins, function(e){
+                var data = e.data;
+                data.resize();
+                data.exec("orientationchange", []);
+            })
         }
     };
 
@@ -452,7 +577,7 @@
 
             return {
                 "viewport" : null,
-                "mode" : MODE.DRAWCARD,
+                "mode" : MODE.SCREEN,
                 "scroll" : SCROLL.VERTICAL,
                 "widgetMode" : WIDGET_MODE.ONCE,
                 "create" : function(){
@@ -524,6 +649,21 @@
                 },
                 "prev" : function(){
                     this.viewport.prev();
+                },
+                "setSceneDeg" : function(deg){
+                    app.sceneDeg = deg;
+
+                    return this;
+                },
+                "setSceneDuration" : function(duration){
+                    app.sceneDuration = duration;
+
+                    return this;
+                },
+                "setScenePerspective" : function(perspective){
+                    app.scenePerspective = perspective;
+
+                    return this;
                 }
             }
         }

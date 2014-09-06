@@ -10,7 +10,7 @@
  * @date 2014.7
  */
 ;define(function (require, exports, module){
-                   require("mod/polyfill/array")
+                   require("mod/polyfill/array");
     var Listener = require("mod/se/listener");
 
     var vendors = ["webkit", "Moz", "ms", "O", ""];

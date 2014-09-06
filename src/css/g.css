@@ -552,6 +552,7 @@ a.on{color:#000; text-decoration:none;}
 }
 /*************************************/
 .webapp{}
+.webapp.mode-screen{}
 .webapp.mode-drawcard{}
 .webapp.mode-waterfall{}
 
@@ -563,4 +564,21 @@ a.on{color:#000; text-decoration:none;}
     .webapp-view.none-footer{bottom: 0;}    
         .webapp-view.none-footer~.webapp-footer{display: none;}
 .webapp-modules{}
-    .webapp-modules section{position: relative; overflow: hidden;}
+    .webapp-modules section{
+        position: relative; overflow: hidden; width: 100%; height: auto; 
+        -webkit-transform: translateZ(0);
+        -moz-transform: translateZ(0);
+        -ms-transform: translateZ(0);
+        -o-transform: translateZ(0);
+        transform: translateZ(0);
+    }
+
+/** reset webapp viewport **/
+.webapp.mode-waterfall .webapp-modules section{height: auto;}
+.webapp.mode-screen .webapp-modules section{height: 100%;}
+.webapp.mode-drawcard .webapp-modules section{position: absolute; z-index: 1; height: 100%;}
+/**-------------------------------**/
+
+
+
+
