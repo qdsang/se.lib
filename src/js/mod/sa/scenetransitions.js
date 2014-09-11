@@ -24,6 +24,8 @@
         "HORZIONTAL": "horizontal"
     };
 
+    var translateZ = Style.hasProperty("perspective") ? "translateZ(0)" : "";
+
     var _SceneTransitions = function(snap, effect, direction){
         this.snap = snap;
         this.scenes = $(snap);
@@ -73,7 +75,6 @@
         this.offset = (Direction.HORZIONTAL == this.direction ? offset.width : offset.height);
 
         if(effect in this){
-            Style.css(this.parent, "perspective", this.perspective);
             this.page(this.currentIndex);
             this.bind();
             this.effect("init", []);
@@ -150,15 +151,15 @@
                 if(i === currentIndex){ //当前显示
                     scene.css("z-index", this.currentZIndex);
                     scene.css("display", "");
-                    Style.css(scene, "transform", "translate(0, 0) translateZ(0)");
+                    Style.css(scene, "transform", "translate(0, 0) " + translateZ);
                 }else if(i === nextIndex){ //下一个
                     scene.css("z-index", this.nextZIndex);
                     scene.css("display", "");
-                    Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == this.direction ? "100%,0" : "0,100%") + ") translateZ(0)");
+                    Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == this.direction ? "100%,0" : "0,100%") + ") " + translateZ);
                 }else if(i === prevIndex){ //上一个
                     scene.css("z-index", this.prevZIndex);
                     scene.css("display", "");
-                    Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == this.direction ? "0,100%" : "100%,0") + ") translateZ(0)");
+                    Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == this.direction ? "0,100%" : "100%,0") + ") " + translateZ);
                 }
             }
         },
@@ -376,6 +377,7 @@
             init : function(__super__){
                 Style.css(__super__.scenes, "transformOrigin", "0 100%");
                 Style.css(__super__.scenes, "transitionTimingFunction", "ease-out");
+                Style.css(__super__.parent, "perspective", __super__.perspective);
             },
             start : function(__super__, event, x, y, target){
                 var stayScene = null;
@@ -387,9 +389,9 @@
                     stayScene = $(__super__.scenes[__super__.stayIndex]);
 
                     if(Direction.HORZIONTAL == __super__.direction){
-                        //Style.css(stayScene, "transform", "rotateY(0deg) translate(0,0) translateZ(0)");
+                        //Style.css(stayScene, "transform", "rotateY(0deg) translate(0,0) " + translateZ);
                     }else{
-                        Style.css(stayScene, "transform", "rotateX(" + __super__.deg + "deg) translate(0,0) translateZ(0)");
+                        Style.css(stayScene, "transform", "rotateX(" + __super__.deg + "deg) translate(0,0) " + translateZ);
                     }
                 }else{ //next
                     __super__.moveIndex = __super__.currentIndex;
@@ -398,9 +400,9 @@
                     stayScene = $(__super__.scenes[__super__.stayIndex]);
 
                     if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(stayScene, "transform", "rotateY(" + __super__.deg + "deg) translate(0,0) translateZ(0)");
+                        Style.css(stayScene, "transform", "rotateY(" + __super__.deg + "deg) translate(0,0) " + translateZ);
                     }else{
-                        Style.css(stayScene, "transform", "rotateX(0deg) translate(100%,0) translateZ(0)");
+                        Style.css(stayScene, "transform", "rotateX(0deg) translate(100%,0) " + translateZ);
                     }
                 }
 
@@ -415,19 +417,19 @@
 
                 if(__super__.moveDirection > 0){ //prev
                     if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "rotateY(-" + __super__.deg + "deg) translate(-100%,0) translateZ(0)");
-                        Style.css(stayScene, "transform", "rotateY(0deg) translateZ(0)");
+                        Style.css(moveScene, "transform", "rotateY(-" + __super__.deg + "deg) translate(-100%,0) " + translateZ);
+                        Style.css(stayScene, "transform", "rotateY(0deg) " + translateZ);
                     }else{
-                        Style.css(moveScene, "transform", "rotateX(0deg) translate(0,100%) translateZ(0)");
-                        Style.css(stayScene, "transform", "rotateX(0deg) translateZ(0)");
+                        Style.css(moveScene, "transform", "rotateX(0deg) translate(0,100%) " + translateZ);
+                        Style.css(stayScene, "transform", "rotateX(0deg) " + translateZ);
                     }
                 }else{ // next
                     if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "rotateY(0deg) translate(0,0) translateZ(0)");
-                        Style.css(stayScene, "transform", "rotateY(" + __super__.deg + "deg) translateZ(0)");
+                        Style.css(moveScene, "transform", "rotateY(0deg) translate(0,0) " + translateZ);
+                        Style.css(stayScene, "transform", "rotateY(" + __super__.deg + "deg) " + translateZ);
                     }else{
-                        Style.css(moveScene, "transform", "rotateX(0deg) translate(0,0) translateZ(0)");
-                        Style.css(stayScene, "transform", "rotateX(" + __super__.deg + "deg) translateZ(0)");
+                        Style.css(moveScene, "transform", "rotateX(0deg) translate(0,0) " + translateZ);
+                        Style.css(stayScene, "transform", "rotateX(" + __super__.deg + "deg) " + translateZ);
                     }
                 }
 
@@ -449,8 +451,8 @@
                         distance = -100 / __super__.offset * distance;
                     }
 
-                    Style.css(moveScene, "transform", "rotateY(" + moveDeg + "deg) translate(" + distance + "%,0) translateZ(0)");
-                    Style.css(stayScene, "transform", "rotateY(" + -stayDeg + "deg) translateZ(0)");
+                    Style.css(moveScene, "transform", "rotateY(" + moveDeg + "deg) translate(" + distance + "%,0) " + translateZ);
+                    Style.css(stayScene, "transform", "rotateY(" + -stayDeg + "deg) " + translateZ);
                 }else{
                     if(__super__.moveDirection > 0){
                         stayDeg = __super__.deg / __super__.offset * Math.abs(distance);
@@ -462,8 +464,8 @@
                         distance = 100 / __super__.offset * distance;
                     }
 
-                    Style.css(moveScene, "transform", "rotateX(" + moveDeg + "deg) translate(0," + distance + "%) translateZ(0)");
-                    Style.css(stayScene, "transform", "rotateX(" + stayDeg + "deg) translateZ(0)");
+                    Style.css(moveScene, "transform", "rotateX(" + moveDeg + "deg) translate(0," + distance + "%) " + translateZ);
+                    Style.css(stayScene, "transform", "rotateX(" + stayDeg + "deg) " + translateZ);
                 }
 
                 __super__.exec("drawing", [event, x, y, target, __super__.currentIndex]);
@@ -480,19 +482,19 @@
 
                 if(__super__.moveDirection > 0){ //prev
                     if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "rotateY(0deg) translate(0,0) translateZ(0)");
-                        Style.css(stayScene, "transform", "rotateY(" + __super__.deg + "deg) translateZ(0)");
+                        Style.css(moveScene, "transform", "rotateY(0deg) translate(0,0) " + translateZ);
+                        Style.css(stayScene, "transform", "rotateY(" + __super__.deg + "deg) " + translateZ);
                     }else{
-                        Style.css(moveScene, "transform", "rotateX(0deg) translate(0,0) translateZ(0)");
-                        Style.css(stayScene, "transform", "rotateX(" + __super__.deg + "deg) translateZ(0)");
+                        Style.css(moveScene, "transform", "rotateX(0deg) translate(0,0) " + translateZ);
+                        Style.css(stayScene, "transform", "rotateX(" + __super__.deg + "deg) " + translateZ);
                     }
                 }else{ // next
                     if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "rotateY(-" + __super__.deg + "deg) translate(-100%,0) translateZ(0)");
-                        Style.css(stayScene, "transform", "rotateY(0deg) translateZ(0)");
+                        Style.css(moveScene, "transform", "rotateY(-" + __super__.deg + "deg) translate(-100%,0) " + translateZ);
+                        Style.css(stayScene, "transform", "rotateY(0deg) " + translateZ);
                     }else{
-                        Style.css(moveScene, "transform", "rotateX(-" + __super__.deg + "deg) translate(0,100%) translateZ(0)");
-                        Style.css(stayScene, "transform", "rotateX(0deg) translateZ(0)");
+                        Style.css(moveScene, "transform", "rotateX(-" + __super__.deg + "deg) translate(0,100%) " + translateZ);
+                        Style.css(stayScene, "transform", "rotateX(0deg) " + translateZ);
                     }
                 }
 

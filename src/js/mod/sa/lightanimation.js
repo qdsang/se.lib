@@ -36,13 +36,13 @@
 
     var getRealStyle = function(style){
         if(undefined === vendor) return undefined;
-        if("" === vendor) return style;
+        if("" === vendor || (style in nodeStyle)) return style;
         return vendor + style.charAt(0).toUpperCase() + style.substr(1);
     };
 
     var getPrefixStyle = function(style){
         if(undefined === vendor) return undefined;
-        if("" === vendor) return style;
+        if("" === vendor || (style in nodeStyle)) return style;
         return "-" + vendor.toLowerCase() + "-" + cssname(style);
     };
 
@@ -134,49 +134,55 @@
             oncomplete : null  
         });
 
-        this.target.on("webkitAnimationStart", "", this, function(e){
-            var data = e.data;
+        var bind = this.target.attr("data-bindla");
 
-            data.exec("animationStart", [data.target, data.current]);
+        if("1" != bind){
+            this.target.on("webkitAnimationStart", "", this, function(e){
+                var data = e.data;
 
-            var it = "animationIterationCount";
-            var pit = getRealStyle(it);
+                data.exec("animationStart", [data.target, data.current]);
 
-            var itc = data.domNode.style[it];
+                var it = "animationIterationCount";
+                var pit = getRealStyle(it);
 
-            if(pit){
-                itc = data.domNode.style[pit];
-            }
+                var itc = data.domNode.style[it];
 
-            if("infinite" == itc){
+                if(pit){
+                    itc = data.domNode.style[pit];
+                }
+
+                if("infinite" == itc){
+                    data.current++;
+                    data.__play__();
+                }
+            });
+
+            this.target.on("webkitAnimationEnd", "", this, function(e){
+                var data = e.data;
+
+                data.exec("animationEnd", [data.target, data.current]);
+
                 data.current++;
                 data.__play__();
-            }
-        });
+            });
 
-        this.target.on("webkitAnimationEnd", "", this, function(e){
-            var data = e.data;
+            this.target.on("webkitAnimationIteration", "", this, function(e){
+                var data = e.data;
 
-            data.exec("animationEnd", [data.target, data.current]);
+                data.exec("animationIteration", [data.target, data.current]);
+            });
 
-            data.current++;
-            data.__play__();
-        });
+            this.target.on("webkitTransitionEnd", "", this, function(e){
+                var data = e.data;
 
-        this.target.on("webkitAnimationIteration", "", this, function(e){
-            var data = e.data;
+                data.exec("transitionEnd", [data.target, data.current]);
 
-            data.exec("animationIteration", [data.target, data.current]);
-        });
+                data.current++;
+                data.__play__();
+            });
 
-        this.target.on("webkitTransitionEnd", "", this, function(e){
-            var data = e.data;
-
-            data.exec("transitionEnd", [data.target, data.current]);
-
-            data.current++;
-            data.__play__();
-        });
+            this.target.attr("data-bindla", "1");
+        }
     };
 
     _LightAnimation.prototype = {
@@ -270,20 +276,23 @@
                             if(animate && false === transformFlag){
                                 if(transformPrefixs){
                                     conf.values.push(transformPrefixs + " " + animate);
+                                }else{
+                                    conf.values.push("transform " + animate);
                                 }
-                                conf.values.push("transform " + animate);
                             }
                         }else{
                             if(prefixs){
                                 conf.properties.push(prefixs + ": " + value);
+                            }else{
+                                conf.properties.push(css + ": " + value);
                             }
-                            conf.properties.push(css + ": " + value);
 
                             if(animate){
                                 if(prefixs){
                                     conf.values.push(prefixs + " " + animate);
+                                }else{
+                                    conf.values.push(css + " " + animate);
                                 }
-                                conf.values.push(css + " " + animate);
                             }
                         }
                     }
@@ -292,15 +301,16 @@
                 if(transform.length > 0){
                     if(transformPrefixs){
                         conf.properties.push(transformPrefixs + ": " + transform.join(" "));
+                    }else{
+                        conf.properties.push("transform: " + transform.join(" "))
                     }
-
-                    conf.properties.push("transform: " + transform.join(" "))
                 }
 
                 if(transitionPrefixs){
                     conf.animate.push(transitionPrefixs + ": " + conf.values.join(", "));
+                }else{
+                    conf.animate.push("transition: " + conf.values.join(", "));
                 }
-                conf.animate.push("transition: " + conf.values.join(", "));
                 queue.push(conf);
             }
 
@@ -340,8 +350,9 @@
                 
                 if(animationPrefixs){
                     conf.animate.push(animationPrefixs + ": " + conf.values.join(", "));
+                }else{
+                    conf.animate.push("animation: " + conf.values.join(", "));
                 }
-                conf.animate.push("animation: " + conf.values.join(", "));
                 queue.push(conf);
             }
 
@@ -370,12 +381,16 @@
 
                 var css = this.runtimeStyle + "; "
                         + properties.join(";") + "; "
-                        + animate.join(";");
+                        + animate.join(";") + ";";
 
-                this.runtimeStyle = this.domNode.style.cssText = css;        
+                this.runtimeStyle = this.domNode.style.cssText = css; 
             }else{
                 this.exec("complete", [this.target]);
             }
+        },
+        updateSource : function(source){
+            this.source = source;
+            this.queue = this.parse(source);
         },
         play : function(){
             this.reset();
@@ -393,6 +408,7 @@
             var la = new _LightAnimation(target, source);
 
             return {
+                "target" : la.target,
                 "set" : function(type, options){
                     la.set(type, options);
 
@@ -405,6 +421,11 @@
                 },
                 "printKeyFrames" : function(){
                     la.printKeyFrames();
+
+                    return this;
+                },
+                "source" : function(source){
+                    la.updateSource(source);
 
                     return this;
                 },

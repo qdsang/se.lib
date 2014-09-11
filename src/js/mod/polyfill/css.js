@@ -31,15 +31,21 @@
         return undefined;
     })();
 
+    var hasProperty = function(property){
+        var rt = getRealStyle(property);
+
+        return ((property in nodeStyle) || (rt in nodeStyle));
+    };
+
     var getRealStyle = function(style){
         if(undefined === vendor) return undefined;
-        if("" === vendor) return style;
+        if("" === vendor || (style in nodeStyle)) return style;
         return vendor + style.charAt(0).toUpperCase() + style.substr(1);
     };
 
     var getPrefixStyle = function(style){
         if(undefined === vendor) return undefined;
-        if("" === vendor) return style;
+        if("" === vendor || (style in nodeStyle)) return style;
         return "-" + vendor.toLowerCase() + "-" + cssname(style);
     };
 
@@ -53,12 +59,14 @@
     	var prefix = getPrefixStyle(name);
 
         if((undefined === prefix || prefix == name)){
+            el.css(name, value);
+        }else{
             el.css(prefix, value);
         }
-        el.css(name, value);
     };
 
     module.exports = {
+        "hasProperty" : hasProperty,
     	"getRealStyle": getRealStyle,
     	"getPrefixStyle": getPrefixStyle,
     	"cssname": cssname,
