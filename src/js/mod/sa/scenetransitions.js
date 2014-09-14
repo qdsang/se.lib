@@ -147,18 +147,18 @@
 
             for(var i = 0; i < size; i++){
                 scene = $(scenes[i]);
-                scene.css("display", "none");
+                scene.css("visibility", "hidden");
                 if(i === currentIndex){ //当前显示
                     scene.css("z-index", this.currentZIndex);
-                    scene.css("display", "");
+                    scene.css("visibility", "visible");
                     Style.css(scene, "transform", "translate(0, 0) " + translateZ);
                 }else if(i === nextIndex){ //下一个
                     scene.css("z-index", this.nextZIndex);
-                    scene.css("display", "");
+                    scene.css("visibility", "visible");
                     Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == this.direction ? "100%,0" : "0,100%") + ") " + translateZ);
                 }else if(i === prevIndex){ //上一个
                     scene.css("z-index", this.prevZIndex);
-                    scene.css("display", "");
+                    scene.css("visibility", "visible");
                     Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == this.direction ? "0,100%" : "100%,0") + ") " + translateZ);
                 }
             }
@@ -289,9 +289,6 @@
             var drawingEvent = touch ? "touchmove" : "mousemove";
 
             this.scenes.on(startEvent, "", this, function(e){
-                e.preventDefault();
-                e.stopPropagation();
-
                 var data = e.data;
                 var target = e.currentTarget;
                 var pointer = data.getPointerPosition(e);
@@ -311,9 +308,6 @@
                 data.startY = pointer.y;     
             })
             .on(endEvent, "", this, function(e){
-                e.preventDefault();
-                e.stopPropagation();
-
                 var data = e.data;
                 var target = e.currentTarget;
                 var pointer = data.getPointerPosition(e);
@@ -335,9 +329,6 @@
                 $(data.scenes[data.moveIndex]).one("webkitTransitionEnd", "", data, data.complete);
             })
             .on(drawingEvent, "", this, function(e){
-                e.preventDefault();
-                e.stopPropagation();
-
                 var data = e.data;
                 var target = e.currentTarget;
                 var pointer = data.getPointerPosition(e);
