@@ -17,11 +17,8 @@
 <body>
 <article class="webapp-view" id="view">
   <div class="webapp-modules">
-    <section style="background-color:red">
-      hello world
-    </section>
-    <section style="background-color:#000">
-      <canvas id="sweet" width="320" height="228"></canvas>
+    <section>
+      Audio Example
     </section>
   </div>
 </article>
@@ -31,7 +28,7 @@
 <script src="/js/lib/sea-2.3.0.js"></script>
 <script src="/js/lib/se.js"></script>
 <script>
-seajs.use(["logic/scratchcard"], function(sc){
+seajs.use(["logic/webapp","logic/audio"], function(app, la){
   // body...
 });
 </script>
