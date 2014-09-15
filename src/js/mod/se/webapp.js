@@ -21,8 +21,7 @@
 
     var MODE = {
         "DRAWCARD": "drawcard",
-        "SCREEN": "screen",
-        "WATERFALL": "waterfall"
+        "SCREEN": "screen"
     };
 
     var SCROLL = {
