@@ -303,47 +303,6 @@
                 height : _h * ratio
             }
             
-        },
-        /**
-         * 获取百分比尺寸
-         * @param Object size {Number width, Number height}当前尺寸
-         * @param Object target {Number width, Number height}目录尺寸
-         */
-        getPercentageSize : function(size, target){
-            var pw = ((size.width / target.width) * 100);
-            var ph = ((size.height / target.height) * 100);
-            
-            var ps = {
-                width : (pw) + "%",
-                height : (ph) + "%"
-            };
-            
-            return ps;
-        },
-        /**
-         * 获取样式前缀
-         * @param String style 样式属性名
-         * @return String style 兼容后的名称
-         */
-        getStylePrefix : function(style){
-            var _elementStyle = document.createElement('div').style;
-            var _vendor = (function () {
-                var vendors = ['t', 'webkitT', 'MozT', 'msT', 'OT'],
-                    transform,
-                    i = 0,
-                    l = vendors.length;
-
-                for ( ; i < l; i++ ) {
-                    transform = vendors[i] + 'ransform';
-                    if ( transform in _elementStyle ) return vendors[i].substr(0, vendors[i].length-1);
-                }
-
-                return false;
-            })();
-
-            if ( _vendor === false ) return false;
-            if ( _vendor === '' ) return style;
-            return _vendor + style.charAt(0).toUpperCase() + style.substr(1);
         }
     };
 

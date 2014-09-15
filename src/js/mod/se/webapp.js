@@ -30,11 +30,6 @@
         "HORIZONTAL": "horizontal"
     };
 
-    var WIDGET_MODE = {
-        "ONCE": "once",
-        "EVERYTIME": "everytime"
-    };
-
     var Widget = function(app, module, widget, data){
         this.app = app;
         this.module = module;
@@ -60,9 +55,6 @@
         next : function(){
             this.effect.play();
             
-        },
-        restore : function(){
-            this.effect.reset();
         }
     };
 
@@ -101,16 +93,15 @@
         this.view = oView;
         this.header = oHeader;
         this.footer = oFooter;
+        this.scroller = null;
         this.modules = null;
-        this.moduleSize = 0;
+        this.innerboxes = null;
         this.widgets = {};
         this.viewport = null;
         this.mode = MODE.SCREEN;
         this.scroll = SCROLL.VERTICAL;
-        this.widgetMode = WIDGET_MODE.ONCE;
+        this.device = {width:320, height:480, ratioWidth:"100%", ratioHeight:"100%"};
         this.fps = 0;
-        this.moduleSnap = [];
-        this.snapRangeOffset = 20;
         this.snapSpeed = 400;
         this.sceneDeg = 28;
         this.sceneDuration = .28;
@@ -171,47 +162,30 @@
         setFPS : function(fps){
             this.fps = fps;
         },
-        calcModulePanelOffset : function(){
-            var mp = $(".webapp-modules");
-            var mpo = mp.offset();
-            var vo = this.view.offset();
+        layout : function(node, view, def, handler){
+            $.each(node, function(index, item){
+                var tmp = $(item);
 
-            mp.css({
-                width: (mpo.width || vo.width) + "px",
-                height: (mpo.height || vo.height) + "px"
+                tmp.css({
+                    "width": ((view.width || def.width) + "px").replace("%px", "%"),
+                    "height": ((view.height || def.height) + "px").replace("%px", "%")
+                });
+
+                offset = tmp.offset();
+
+                tmp.attr("data-index", index)
+                   .attr("data-x", offset.left)
+                   .attr("data-y", offset.top)
+                   .attr("data-width", offset.width)
+                   .attr("data-height", offset.height);
+
+                Util.execAfterMergerHandler(handler, [index, tmp]);
+
+                tmp = null;
             });
-
-            mp.attr("data-x", mpo.left)
-              .attr("data-y", mpo.top)
-              .attr("data-width", (mpo.width || vo.width))
-              .attr("data-height", (mpo.height || vo.height));
         },
-        calcModuleOffset : function(){
+        update : function(){
             var _ins = this;
-            var header = this.header ? this.header.offset() : {width:0, height:0};
-
-            $.each(this.modules, function(index, module){
-                var m = $(module);
-                var offset = m.offset();
-
-                m.attr("data-index", index)
-                 .attr("data-x", offset.left)
-                 .attr("data-y", offset.top)
-                 .attr("data-width", offset.width)
-                 .attr("data-height", offset.height);
-
-                 _ins.moduleSnap.push({
-                    index: index,
-                    x: offset.left,
-                    y: offset.top - header.height,
-                    width: offset.width,
-                    height: offset.height
-                 });
-
-                 _ins.queryModuleWidget(index, m);
-            });
-        },
-        calcViewportOffset : function(){
             var w = window.innerWidth;
             var h = window.innerHeight;
 
@@ -220,34 +194,26 @@
 
             h = h - header.height - footer.height;
 
-            this.view.css({
-                "width": w + "px",
-                "height": h + "px"
+            var v = {
+                width: w,
+                height: h
+            };
+
+            _ins.setAppDeviceSize();
+
+            _ins.layout(_ins.view, v, v, null);
+            _ins.layout(_ins.modules, v, v, {
+                callback: function(index, module){
+                    this.queryModuleWidget(index, module);
+                },
+                context: _ins
             });
+            _ins.layout(_ins.scroller, _ins.scroller.offset(), v, null);
+            _ins.layout(_ins.innerboxes, {
+                width: _ins.device.ratioWidth,
+                height: _ins.device.ratioHeight
+            }, v, null);
 
-            var offset = this.view.offset();
-
-            this.view.attr("data-x", offset.left)
-                     .attr("data-y", offset.top)
-                     .attr("data-width", offset.width)
-                     .attr("data-height", offset.height);
-        },
-        adjusted : function(){
-            var w = window.innerWidth;
-            var h = window.innerHeight;
-
-            var header = this.header ? this.header.offset() : {width:0, height:0};
-            var footer = this.footer ? this.footer.offset() : {width:0, height:0};
-
-            h = h - header.height - footer.height;
-
-            this.modules.css({
-                "width": w + "px",
-                "height": h + "px"
-            });
-
-            this.calcModuleOffset();
-            this.calcModulePanelOffset();
         },
         preventTouchMove : function(){
             $(document).on("touchmove", function(e){
@@ -270,40 +236,6 @@
             }
 
             return index;
-        },
-        getModuleSnapRange : function(){
-            var _ins = this;
-            var vp = _ins.viewport;
-            var x = Math.abs(vp.x);
-            var y = Math.abs(vp.y);
-            var snap = [];
-            var ms = _ins.moduleSnap;
-            var size = ms.length;
-            var m = null;
-            var view = _ins.view.offset();
-            var ix = x + view.width;
-            var iy = y + view.height;
-            var offset = _ins.snapRangeOffset;
-
-            //console.info("x: " + x + "; y: " + y + "; ix: " + ix + "; iy: " + iy);
-
-            for(var i = 0; i < size; i++){
-                m = ms[i];
-
-                //console.info("m.x: " + m.x + "; m.y: " + m.y)
-
-                if(_ins.scroll == SCROLL.VERTICAL){
-                    if((m.y + offset) >= y && (m.y + offset) <= iy){
-                        snap.push(m);
-                    }
-                }else{
-                    if((m.x + offset) >= x && (m.x + offset) <= ix){
-                        snap.push(m);
-                    }
-                }
-            }
-
-            return snap;
         },
         queryModuleWidget : function(index, module){
             var _ins = this;
@@ -328,31 +260,13 @@
             var module = $(_ins.modules[index]);
             var setted = module.attr("data-setted");
 
-            if(WIDGET_MODE.EVERYTIME == _ins.widgetMode || "1" != setted){
+            if("1" != setted){
                 for(var i = 0, size = widgets.length; i < size; i++){
                     (function(widget){
                         widget.next();
                     })(widgets[i])
                 }
                 module.attr("data-setted", "1");
-            }
-        },
-        restoreModuleWidget : function(index){
-            var _ins = this;
-            var widgets = _ins.widgets[String(index)] || [];
-
-            if(WIDGET_MODE.EVERYTIME == _ins.widgetMode){
-                for(var i = 0, size = widgets.length; i < size; i++){
-                    widgets[i].restore();
-                }
-            }
-        },
-        displayViewportWidget : function(){
-            var snaps = this.getModuleSnapRange();
-            var size = snaps.length;
-
-            for(var i = 0; i < size; i++){
-                this.showModuleWidget(snaps[i].index);
             }
         },
         initViewport : function(options){
@@ -370,34 +284,10 @@
             _ins.preventTouchMove();
             _ins.viewport.refresh();
         },
-        createWaterfallViewport : function(){
-            var _ins = this;
-
-            _ins.calcModuleOffset();
-            _ins.calcModulePanelOffset();
-            _ins.initViewport({
-                probeType: 1
-            });
-
-            _ins.viewport.on("beforeScrollStart", function(){
-                _ins.exec("before", [_ins.viewport]);
-            });
-            _ins.viewport.on("scrollStart", function(){
-                _ins.exec("start", [_ins.viewport]);
-            });
-            _ins.viewport.on("scroll", function(){
-                _ins.exec("scrolling", [_ins.viewport]);
-            });
-            _ins.viewport.on("scrollEnd", function(){
-                _ins.displayViewportWidget();
-                _ins.exec("end", [_ins.viewport]);
-            });
-        },
         createSingleScreenViewport : function(){
             var _ins = this;
             var _prepage = -1;
 
-            _ins.adjusted();
             _ins.initViewport({
                 momentum: false,
                 probeType: 1,
@@ -407,20 +297,19 @@
             });
 
             _ins.viewport.on("beforeScrollStart", function(){
-                _ins.exec("before", [_ins.viewport]);
+                _ins.exec("before", [_ins.viewport, _ins.getCurrentModuleIndex()]);
             });
             _ins.viewport.on("scrollStart", function(){
-                _ins.restoreModuleWidget(_ins.getCurrentModuleIndex());
 
-                _ins.exec("start", [_ins.viewport]);
+                _ins.exec("start", [_ins.viewport, _ins.getCurrentModuleIndex()]);
             });
             _ins.viewport.on("scroll", function(){
-                _ins.exec("scrolling", [_ins.viewport]);
+                _ins.exec("scrolling", [_ins.viewport, _ins.getCurrentModuleIndex()]);
             });
             _ins.viewport.on("scrollEnd", function(){
                 _ins.showModuleWidget(_ins.getCurrentModuleIndex());
 
-                _ins.exec("end", [_ins.viewport]);
+                _ins.exec("end", [_ins.viewport, _ins.getCurrentModuleIndex()]);
             });
         },
         createDrawCardViewport : function(){
@@ -429,7 +318,6 @@
 
             var st = null;
 
-            _ins.adjusted();
             _ins.initViewport({
                 momentum: false,
                 probeType: 3,
@@ -444,52 +332,31 @@
             st.setPerspective(_ins.scenePerspective);
             st.set("start", {
                 callback: function(e, x, y, target, index){
-                    _ins.restoreModuleWidget(index);
-                    this.exec("start", [this.viewport]);
+
+                    this.exec("start", [this.viewport, index]);
                 },
                 context: _ins
             });
             st.set("drawing", {
                 callback: function(e, x, y, target, index){
-                    this.exec("scrolling", [this.viewport]);
+                    this.exec("scrolling", [this.viewport, index]);
                 },
                 context: _ins
             });
             st.set("complete", {
                 callback: function(e, index){
                     _ins.showModuleWidget(index);
-                    this.exec("end", [this.viewport]);
+                    this.exec("end", [this.viewport, index]);
                 },
                 context: _ins
             });
-
-            // _ins.viewport.on("beforeScrollStart", function(){
-            //     _ins.exec("before", [_ins.viewport]);
-            // });
-            // _ins.viewport.on("scrollStart", function(){
-            //     _ins.restoreModuleWidget(_ins.getCurrentModuleIndex());
-
-            //     _ins.exec("start", [_ins.viewport]);
-            // });
-            // _ins.viewport.on("scroll", function(){
-            //     console.info(this.x + "/" + this.y)
-            //     _ins.exec("scrolling", [_ins.viewport]);
-            // });
-            // _ins.viewport.on("scrollEnd", function(){
-            //     _ins.showModuleWidget(_ins.getCurrentModuleIndex());
-
-            //     _ins.exec("end", [_ins.viewport]);
-            // });
         },
         createViewport : function(){
             var _ins = this;
 
-            _ins.calcViewportOffset();
+            _ins.update();
 
             switch(_ins.mode){
-                case MODE.WATERFALL:
-                    _ins.createWaterfallViewport();
-                break;
                 case MODE.DRAWCARD:
                     _ins.createDrawCardViewport();
                 break;
@@ -504,18 +371,10 @@
         resize : function(){
             var _ins = this;
 
-            _ins.calcViewportOffset();
-
             switch(_ins.mode){
-                case MODE.WATERFALL:
-                    _ins.calcModuleOffset();
-                    _ins.calcModulePanelOffset();
-                break;
                 case MODE.DRAWCARD:
-                    _ins.adjusted();
-                break;
                 case MODE.SCREEN:
-                    _ins.adjusted();
+                    _ins.update();
                 break;
                 default:
                     throw new Error("Unkonwn View Mode(" + _ins.mode + ")");
@@ -540,22 +399,47 @@
                 }
             })
         },
-        setAppMode : function(){
-            var root = this.root;
+        setAppDeviceSize : function(){
+            var _ins = this;
+            var device = _ins.app.attr("data-device")||"";
+            var items = device.split("/");
+            var w = items[0] || "device-width";
+            var h = items[1] || "device-height";
+            var sw = window.screen.width;
+            var sh = window.screen.height;
+            var ratioX = 1;
+            var ratioY = 1;
 
-            root.removeClass();
-            root.addClass("webapp mode-" + this.mode);
+            w = isNaN(Number(w)) ? "device-width" : Number(w);
+            h = isNaN(Number(h)) ? "device-height" : Number(h);
+
+            if("device-width" == w){
+                w = sw;
+            }
+
+            if("device-height" == h){
+                h = sh;
+            }
+
+            w = Math.min(Math.max(w, 200), 10000);
+            h = Math.min(Math.max(h, 223), 10000);
+
+            _ins.device = {
+                "width": w,
+                "height": h,
+                "ratioWidth": "100%",
+                "ratioHeight": ((sw * h / w) / sh * 100) + "%"
+            };
         },
         init : function(){
             var _ins = this;
 
-            _ins.modules = $(".webapp-modules section");
-            _ins.moduleSize = _ins.modules.length;
+            _ins.scroller = $(".webapp-modules");
+            _ins.modules = $(".webapp-modules>section");
+            _ins.innerboxes = $(".webapp-modules>section>.innerbox");
             _ins.mode = _ins.app.attr("data-mode") || MODE.SCREEN;
             _ins.scroll = _ins.app.attr("data-scroll") || SCROLL.VERTICAL;
-            _ins.widgetMode = _ins.app.attr("data-widget-mode") || WIDGET_MODE.ONCE;
 
-            _ins.setAppMode();
             _ins.createViewport();
             _ins.enterframe();
 
@@ -579,14 +463,12 @@
                 "viewport" : null,
                 "mode" : MODE.SCREEN,
                 "scroll" : SCROLL.VERTICAL,
-                "widgetMode" : WIDGET_MODE.ONCE,
                 "create" : function(){
                     app.init();
 
                     this.viewport = app.viewport;
                     this.mode = app.mode;
                     this.scroll = app.scroll;
-                    this.widgetMode = app.widgetMode;
 
                     app.exec("init", []);
                 },
@@ -605,25 +487,8 @@
 
                     return this;
                 },
-                "setSnapRangeOffset" : function(offset){
-                    app.snapRangeOffset = offset;
-
-                    return this;
-                },
-                "getCurrentModuleIndex" : function(){
-                    return app.getCurrentModuleIndex();
-                },
-                "getModuleSnapRange" : function(){
-                    return app.getModuleSnapRange();
-                },
-                "displayViewportWidget" : function(){
-                    app.displayViewportWidget();
-                },
                 "showModuleWidget" : function(index){
                     app.showModuleWidget(index);
-                },
-                "restoreModuleWidget" : function(index){
-                    app.restoreModuleWidget(index);
                 },
                 "refresh" : function(){
                     this.viewport.refresh();

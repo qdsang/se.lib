@@ -5,12 +5,7 @@ define(function(require,exports,module){
 
 	app.set("init", {
 		callback : function(){
-
-			if("drawcard" == app.mode){
-				app.showModuleWidget(app.getCurrentModuleIndex());
-			}else{
-				app.displayViewportWidget();
-			}
+			app.showModuleWidget(0);	
 		}
 	});
 	app.create();
