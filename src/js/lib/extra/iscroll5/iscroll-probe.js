@@ -236,7 +236,6 @@ var utils = (function () {
 				target.screenX, target.screenY, target.clientX, target.clientY,
 				e.ctrlKey, e.altKey, e.shiftKey, e.metaKey,
 				0, null);
-
 			ev._constructed = true;
 			target.dispatchEvent(ev);
 		}
@@ -1584,9 +1583,11 @@ IScroll.prototype = {
 				this._key(e);
 				break;
 			case 'click':
-				if ( !e._constructed ) {
-					e.preventDefault();
-					e.stopPropagation();
+				if(arguments.callee.caller != null){
+					if ( !e._constructed ) {
+						e.preventDefault();
+						e.stopPropagation();
+					}
 				}
 				break;
 		}

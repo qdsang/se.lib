@@ -68,7 +68,7 @@
                 }
 
                 if(null != _class && (_method in _class)){
-                    _class[_method].apply(null, [_data, cur]);
+                    _class[_method].apply(null, [_data, cur, e]);
                 }
             }
         }

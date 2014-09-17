@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html class="webapp" data-mode="drawcard" data-scroll="vertical" id="webapp">
+<html class="webapp" data-mode="screen" data-scroll="vertical" id="webapp">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, minimal-ui" />
@@ -14,8 +14,7 @@
 <article class="webapp-view" id="view">
   <div class="webapp-modules">
     <section style="background-color:red">
-      <div id="w1" style="width:80px; height:80px; opacity:0; background:#fff;transform:translate3d(0,0,0) rotate(0deg)">Light Animation</div>
-      <div id="w2" style="position:absolute; left:40px; top: 100px; width:80px; height:80px; background:yellow; transform:rotate(0deg)"></div>
+      <div id="t" style="position:absolute; margin:0 auto; transform: scale(0.71)"></div>
     </section>
   </div>
 </article>
@@ -25,8 +24,8 @@
 <script src="/js/lib/sea-2.3.0.js"></script>
 <script src="/js/lib/se.js"></script>
 <script>
-seajs.use(["logic/webapp","logic/lightanimation"], function(app, la){
-  // body...
+seajs.use(["logic/webapp","logic/turntable"], function(app, turntable){
+  turntable.init();
 });
 </script>
 </body>
