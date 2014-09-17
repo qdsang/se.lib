@@ -280,8 +280,7 @@
             };
 
             _ins.viewport = new iScroll(this.view[0], $.extend(opt, options));
-            console.info(_ins.viewport.options)
-            //_ins.preventTouchMove();
+            _ins.preventTouchMove();
             _ins.viewport.refresh();
         },
         createSingleScreenViewport : function(){

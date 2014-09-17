@@ -24,7 +24,7 @@
         "WAV": {type: "/wav", "codec": {"audio":"", "video":""}},
         "WEBM": {type: "/webm", "codec": {"audio":"", "video":"vp8.0, vorbis"}},
         parse : function(type, src){
-            var p = /\.(mp3|mp4|ogg|wav|webm)$/gi;
+            var p = /\.(mp3|mp4|ogg|wav|webm)(\?.*)?$/gi;
             var result = null;
             var format = null;
             var mime = null;
