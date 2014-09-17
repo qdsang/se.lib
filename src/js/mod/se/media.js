@@ -97,8 +97,7 @@
             this.mediaNode[0].pause();
         },
         cancelBubble : function(e){
-            //e.stopPropagation();
-            console.info(e.type)
+            e.stopPropagation();
         },
         insert : function(target, attributes){
             if(this.mediaNode.length == 0){
@@ -116,6 +115,10 @@
                     this.mediaNode.append("Your browser does not support the " + this.type + " element.");
 
                     $(target).append(this.mediaNode);
+
+                    $(target).on("touchstart", this.cancelBubble)
+                             .on("touchmove", this.cancelBubble)
+                             .on("touchend", this.cancelBubble);
 
                 }else{
                     throw new Error("the media dose not support this MIME type(" + this.mime.type + ")");
