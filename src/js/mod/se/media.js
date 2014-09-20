@@ -119,7 +119,6 @@
 
                     if(true === this.bubble){
                         $(target).on("touchstart", this.cancelBubble)
-                                 .on("touchmove", this.cancelBubble)
                                  .on("touchend", this.cancelBubble);
                     }
 
