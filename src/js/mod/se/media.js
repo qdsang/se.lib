@@ -74,7 +74,6 @@
 
             this.mediaNode.append(source);
         },
-
         on : function(){
             this.mediaNode.on.apply(this.mediaNode, arguments);
         },
@@ -99,9 +98,10 @@
         cancelBubble : function(e){
             e.stopPropagation();
         },
-        insert : function(target, attributes){
+        insert : function(target, attributes, forceVideo){
             if(this.mediaNode.length == 0){
-                this.mediaNode = $('<' + this.type + ' />');
+                var tagName = (forceVideo ? "video" : this.type);
+                this.mediaNode = $('<' + tagName + ' />');
 
                 if(this.canPlayType(this.mime.type)){
                     for(var name in attributes){
@@ -111,14 +111,17 @@
                     }
 
                     this.setProperty("id", this.name);
+                    this.setProperty("src", this.src);
                     this.source(this.src, this.mime.type);
-                    this.mediaNode.append("Your browser does not support the " + this.type + " element.");
+                    this.mediaNode.append("Your browser does not support the " + tagName + " element.");
 
                     $(target).append(this.mediaNode);
 
-                    $(target).on("touchstart", this.cancelBubble)
-                             .on("touchmove", this.cancelBubble)
-                             .on("touchend", this.cancelBubble);
+                    if(true === this.bubble){
+                        $(target).on("touchstart", this.cancelBubble)
+                                 .on("touchmove", this.cancelBubble)
+                                 .on("touchend", this.cancelBubble);
+                    }
 
                 }else{
                     throw new Error("the media dose not support this MIME type(" + this.mime.type + ")");
@@ -128,8 +131,8 @@
     };
 
     var _pub = {
-        newInstance : function(type, name, src){
-            var ins = new _Media(type, name, src);
+        newInstance : function(type, name, src, bubble){
+            var ins = new _Media(type, name, src, bubble);
 
             return {
                 setProperty : function(name, value){
@@ -159,8 +162,8 @@
                 pause : function(){
                     ins.pause();
                 },
-                insert : function(target, attributes){
-                    ins.insert(target, attributes);
+                insert : function(target, attributes, forceVideo){
+                    ins.insert(target, attributes, forceVideo);
                 }
             };
         }

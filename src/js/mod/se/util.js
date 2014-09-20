@@ -260,8 +260,8 @@
         /**
          * 设置Action勾子         
          */
-        setActionHook : function(){
-            var body = $("body");
+        setActionHook : function(selector){
+            var body = $(selector || "body");
             var setting = body.attr("data-actionhook");
 
             if("1" != setting){

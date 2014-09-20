@@ -184,7 +184,7 @@
             ctx.fillStyle = fillStyle;
             ctx.fillRect(x, y, width, height);
 
-            this.appendText(this.scratchText)
+            this.appendText(this.scratchText);
 
             ctx.globalCompositeOperation = "destination-out"; 
         },
