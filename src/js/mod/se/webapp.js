@@ -404,11 +404,8 @@
             var items = device.split("/");
             var w = items[0] || "device-width";
             var h = items[1] || "device-height";
-            var pixelRatio = Util.getDevicePixelRatio();
-            var sw = window.screen.width / pixelRatio;
-            var sh = window.screen.height / pixelRatio;
-            var ratioX = 1;
-            var ratioY = 1;
+            var sw = window.innerWidth;
+            var sh = window.innerHeight;
 
             w = isNaN(Number(w)) ? "device-width" : Number(w);
             h = isNaN(Number(h)) ? "device-height" : Number(h);
