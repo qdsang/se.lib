@@ -288,21 +288,6 @@
          */
         getDevicePixelRatio : function(){
             return window.devicePixelRatio || 1;
-        },
-        /**
-         * 获取视图像素尺寸
-         * @return Object {Number width, Number height}
-         */
-        getViewportPixel : function(){
-            var _w = window.innerWidth;
-            var _h = window.innerHeight;
-            var ratio = this.getDevicePixelRatio();
-            
-            return {
-                width : _w * ratio,
-                height : _h * ratio
-            }
-            
         }
     };
 
