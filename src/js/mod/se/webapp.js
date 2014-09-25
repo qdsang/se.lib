@@ -10,23 +10,21 @@
  * @date 2014.8
  */
 ;define(function WebApp(require, exports, module){
-                        require("lib/extra/iscroll5/iscroll-probe");
+                        require("mod/zepto/touch");
                         require("mod/se/raf");
     var Listener      = require("mod/se/listener");
     var Util = $.Util = require("mod/se/util");
     var LA            = require("mod/sa/lightanimation");
     var ST            = require("mod/sa/scenetransitions");
 
-    var iScroll = window.IScroll;
-
-    var MODE = {
-        "DRAWCARD": "drawcard",
-        "SCREEN": "screen"
-    };
-
     var SCROLL = {
         "VERTICAL": "vertical",
         "HORIZONTAL": "horizontal"
+    };
+
+    var WIDGET_MODE = {
+        "ONCE": "once",
+        "EVERYTIME": "everytime"
     };
 
     var Widget = function(app, module, widget, data){
@@ -54,6 +52,9 @@
         next : function(){
             this.effect.play();
             
+        },
+        restore : function(){
+            this.effect.reset();
         }
     };
 
@@ -96,19 +97,17 @@
         this.modules = null;
         this.innerboxes = null;
         this.widgets = {};
-        this.viewport = null;
-        this.mode = MODE.SCREEN;
+        this.mode = TransitionEffect.ROTATE;
         this.scroll = SCROLL.VERTICAL;
+        this.widgetMode = WIDGET_MODE.ONCE;
         this.device = {width:320, height:480, ratioWidth:"100%", ratioHeight:"100%"};
         this.fps = 0;
-        this.snapSpeed = 400;
         this.sceneDeg = 28;
         this.sceneDuration = .28;
         this.scenePerspective = "300px";
 
         this.listener = new Listener({
             oninit : null,              //初始化时的回调{Function callback, Array args, Object context}
-            onbefore : null,             //滑动前{Function callback, Array args, Object context}
             onbegin : null,              //滑动开始{Function callback, Array args, Object context}
             onscrolling : null,           //滑动中{Function callback, Array args, Object context}
             onend : null,                //滑动结束{Function callback, Array args, Object context}
@@ -219,23 +218,6 @@
                 e.preventDefault();
             });
         },
-        getCurrentModuleIndex : function(){
-            var _ins = this;
-            var currentPage = _ins.viewport.currentPage;
-            var index = 0;
-
-            if(currentPage){
-
-                if(_ins.scroll == SCROLL.VERTICAL){
-                    index = currentPage.pageY; 
-                }else{
-                    index = currentPage.pageX;
-                }
-
-            }
-
-            return index;
-        },
         queryModuleWidget : function(index, module){
             var _ins = this;
             var widgets = null;
@@ -259,7 +241,7 @@
             var module = $(_ins.modules[index]);
             var setted = module.attr("data-setted");
 
-            if("1" != setted){
+            if(WIDGET_MODE.EVERYTIME == _ins.widgetMode || "1" != setted){
                 for(var i = 0, size = widgets.length; i < size; i++){
                     (function(widget){
                         widget.next();
@@ -268,84 +250,59 @@
                 module.attr("data-setted", "1");
             }
         },
-        initViewport : function(options){
+        restoreModuleWidget : function(index){
             var _ins = this;
-            var opt = {
-                mouseWheel: true,
-                scrollbars: false,
-                probeType: 3,
-                click: true,
-                scrollX: (SCROLL.HORIZONTAL == _ins.scroll),
-                scrollY: (SCROLL.VERTICAL == _ins.scroll)
-            };
+            var widgets = _ins.widgets[String(index)] || [];
 
-            _ins.viewport = new iScroll(this.view[0], $.extend(opt, options));
-            _ins.preventTouchMove();
-            _ins.viewport.refresh();
+            if(WIDGET_MODE.EVERYTIME == _ins.widgetMode){
+                for(var i = 0, size = widgets.length; i < size; i++){
+                    widgets[i].restore();
+                }
+            }
         },
-        createSingleScreenViewport : function(){
+        restoreExceptModuleWidget : function(index){
             var _ins = this;
-            var _prepage = -1;
+            var sIndex = String(index);
 
-            _ins.initViewport({
-                momentum: false,
-                probeType: 1,
-                snap: "section",
-                snapSpeed: _ins.snapSpeed,
-                mouseWheel: false
-            });
-
-            _ins.viewport.on("beforeScrollStart", function(){
-                _ins.exec("before", [_ins.viewport, _ins.getCurrentModuleIndex()]);
-            });
-            _ins.viewport.on("scrollStart", function(){
-
-                _ins.exec("start", [_ins.viewport, _ins.getCurrentModuleIndex()]);
-            });
-            _ins.viewport.on("scroll", function(){
-                _ins.exec("scrolling", [_ins.viewport, _ins.getCurrentModuleIndex()]);
-            });
-            _ins.viewport.on("scrollEnd", function(){
-                _ins.showModuleWidget(_ins.getCurrentModuleIndex());
-
-                _ins.exec("end", [_ins.viewport, _ins.getCurrentModuleIndex()]);
-            });
+            if(WIDGET_MODE.EVERYTIME == _ins.widgetMode){
+                for(var key in _ins.widgets){
+                    if(sIndex != key){
+                        _ins.restoreModuleWidget(key);
+                    }
+                }
+            }
         },
-        createDrawCardViewport : function(){
+        configure : function(){
             var _ins = this;
             var _prepage = -1;
 
             var st = null;
 
-            _ins.initViewport({
-                momentum: false,
-                probeType: 3,
-                snap: "section",
-                snapSpeed: _ins.snapSpeed,
-                mouseWheel: false
-            });
+            _ins.preventTouchMove();
 
-            st = ST.newInstance("section", TransitionEffect.ROTATE, _ins.scroll);
+            st = ST.newInstance("section", _ins.mode, _ins.scroll);
             st.setDeg(_ins.sceneDeg);
             st.setDuration(_ins.sceneDuration);
             st.setPerspective(_ins.scenePerspective);
+
             st.set("start", {
                 callback: function(e, x, y, target, index){
 
-                    this.exec("start", [this.viewport, index]);
+                    this.exec("start", [target, index]);
                 },
                 context: _ins
             });
             st.set("drawing", {
                 callback: function(e, x, y, target, index){
-                    this.exec("scrolling", [this.viewport, index]);
+                    this.exec("scrolling", [target, index]);
                 },
                 context: _ins
             });
             st.set("complete", {
                 callback: function(e, index){
                     _ins.showModuleWidget(index);
-                    this.exec("end", [this.viewport, index]);
+                    _ins.restoreExceptModuleWidget(index);
+                    this.exec("end", [null, index]);
                 },
                 context: _ins
             });
@@ -354,33 +311,12 @@
             var _ins = this;
 
             _ins.update();
-
-            switch(_ins.mode){
-                case MODE.DRAWCARD:
-                    _ins.createDrawCardViewport();
-                break;
-                case MODE.SCREEN:
-                    _ins.createSingleScreenViewport();
-                break;
-                default:
-                    throw new Error("Unkonwn View Mode(" + _ins.mode + ")");
-                break;
-            }
+            _ins.configure();
         },
         resize : function(){
             var _ins = this;
 
-            switch(_ins.mode){
-                case MODE.DRAWCARD:
-                case MODE.SCREEN:
-                    _ins.update();
-                break;
-                default:
-                    throw new Error("Unkonwn View Mode(" + _ins.mode + ")");
-                break;
-            }
-
-            _ins.viewport.refresh();
+            _ins.update();
         },
         enterframe : function(){
             var _ins = this;
@@ -434,8 +370,9 @@
             _ins.scroller = $(".webapp-modules");
             _ins.modules = $(".webapp-modules>section");
             _ins.innerboxes = $(".webapp-modules>section>.innerbox");
-            _ins.mode = _ins.app.attr("data-mode") || MODE.SCREEN;
+            _ins.mode = _ins.app.attr("data-mode") || TransitionEffect.ROTATE;
             _ins.scroll = _ins.app.attr("data-scroll") || SCROLL.VERTICAL;
+            _ins.widgetMode = _ins.app.attr("data-widget-mode") || WIDGET_MODE.ONCE;
 
             _ins.createViewport();
             _ins.enterframe();
@@ -457,15 +394,15 @@
             var app = new _WebApp(appId, viewId, headerId, footerId);
 
             return {
-                "viewport" : null,
-                "mode" : MODE.SCREEN,
+                "mode" : TransitionEffect.ROTATE,
                 "scroll" : SCROLL.VERTICAL,
+                "widgetMode" : WIDGET_MODE.ONCE,
                 "create" : function(){
                     app.init();
 
-                    this.viewport = app.viewport;
                     this.mode = app.mode;
                     this.scroll = app.scroll;
+                    this.widgetMode = app.widgetMode;
 
                     app.exec("init", []);
                 },
@@ -479,38 +416,20 @@
 
                     return this;
                 },
-                "setSnapSpeed" : function(speed){
-                    app.snapSpeed = speed;
+                "showModuleWidget" : function(index){
+                    app.showModuleWidget(index);
 
                     return this;
                 },
-                "showModuleWidget" : function(index){
-                    app.showModuleWidget(index);
+                "restoreModuleWidget" : function(index){
+                    app.restoreModuleWidget(index);
+
+                    return this;
                 },
-                "refresh" : function(){
-                    this.viewport.refresh();
-                },
-                "scrollTo" : function(x, y, time, easing){
-                    //easing: quadratic, circular, back, bounce, elastic
-                    this.viewport.scrollTo(x, y, time, IScroll.utils.ease[easing]);
-                },
-                "scrollBy" : function (x, y, time, easing){
-                    //easing: quadratic, circular, back, bounce, elastic
-                    this.viewport.scrollBy(x, y, time, IScroll.utils.ease[easing]);
-                },
-                "scrollToElement" : function(el, time, offsetX, offsetY, easing){
-                    //easing: quadratic, circular, back, bounce, elastic
-                    this.viewport.scrollToElement(el, time, offsetX, offsetY, IScroll.utils.ease[easing]);
-                },
-                "goToPage" : function(x, y, time, easing){
-                    //easing: quadratic, circular, back, bounce, elastic
-                    this.viewport.goToPage(x, y, time, IScroll.utils.ease[easing]);
-                },
-                "next" : function(){
-                    this.viewport.next();
-                },
-                "prev" : function(){
-                    this.viewport.prev();
+                "restoreExceptModuleWidget" : function(index){
+                    app.restoreExceptModuleWidget(index);
+
+                    return this;
                 },
                 "setSceneDeg" : function(deg){
                     app.sceneDeg = deg;

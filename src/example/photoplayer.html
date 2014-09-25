@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+
+<html class="webapp" data-mode="screen" data-scroll="vertical" id="webapp">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, minimal-ui" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="format-detection"content="telephone=no, email=no" />
+  <title>Web App</title>
+  <link rel="stylesheet" type="text/css" href="/css/lib/g.css">
+  <style type="text/css">
+  .photoplayer{width: 100%; height: 100%; position: relative;}
+    .photo{position: absolute; left:0; top:0; width: 100%; height: 100%; -webkit-transform:translate(0,0) scale(10) rotate(0deg); transform:translate(0,0) scale(10) rotate(0deg); opacity: 0; z-index: 2}
+  </style>
+</head>
+<body>
+<article class="webapp-view" id="view">
+  <div class="webapp-modules">
+    <section>
+      <div class="photoplayer" id="pper" data-in="transition::translate:0,0!0.4s ease-out" style="background:#ededed;-webkit-transform:translate(0, -100%); transform:translate(0, -100%)">
+        <div class="photo" style="background:red" data-in="transition::translate:0,0!0.5s ease;scale:0.8!0.5s ease;rotate:350deg!0.5s ease;opacity:1!0.5s ease"></div>
+        <div class="photo" style="background:blue" data-in="transition::translate:0,0!0.5s ease 0.2s;scale:0.8!0.5s ease 0.2s;rotate:340deg!0.5s ease 0.2s;opacity:1!0.5s ease 0.2s"></div>
+        <div class="photo" style="background:green" data-in="transition::translate:0,0!0.5s ease 0.4s;scale:0.8!0.5s ease 0.4s;rotate:330deg!0.5s ease 0.4s;opacity:1!0.5s ease 0.4s"></div>
+        <div class="photo" style="background:yellow" data-in="transition::translate:0,0!0.5s ease 0.6s;scale:0.8!0.5s ease 0.6s;rotate:320deg!0.5s ease 0.6s;opacity:1!0.5s ease 0.6s"></div>
+        <div class="photo" style="background:pink" data-in="transition::translate:0,0!0.5s ease 0.8s;scale:0.8!0.5s ease 0.8s;rotate:310deg!0.5s ease 0.8s;opacity:1!0.5s ease 0.8s"></div>
+        <div class="photo" style="background:gray" data-in="transition::translate:0,0!0.5s ease 1s;scale:0.8!0.5s ease 1s;rotate:300deg!0.5s ease 1s;opacity:1!0.5s ease 1s"></div>
+        <div class="photo" style="background:black" data-in="transition::translate:0,0!0.5s ease 1.2s;scale:0.8!0.5s ease 1.2s;rotate:290deg!0.5s ease 1.2s;opacity:1!0.5s ease 1.2s"></div>
+        <div class="photo" style="background:orange" data-in="transition::translate:0,0!0.5s ease 1.4s;scale:0.8!0.5s ease 1.4s;rotate:280deg!0.5s ease 1.4s;opacity:1!0.5s ease 1.4s"></div>
+      </div>
+    </section>
+  </div>
+</article>
+<header class="webapp-header" id="header">Web App</header>
+<footer class="webapp-footer" id="footer">&copy; 2014</footer>
+<script src="/js/lib/zepto-1.1.4.js"></script>
+<script src="/js/lib/sea-2.3.0.js"></script>
+<script src="/js/lib/se.js"></script>
+<script>
+seajs.use(["logic/webapp","logic/photoplayer"], function(app){
+  // body...
+});
+</script>
+</body>
+</html>

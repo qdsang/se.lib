@@ -118,8 +118,8 @@
                     $(target).append(this.mediaNode);
 
                     if(true === this.bubble){
-                        $(target).on("touchstart", this.cancelBubble)
-                                 .on("touchend", this.cancelBubble);
+                        this.mediaNode.on("touchstart", this.cancelBubble)
+                                      .on("touchend", this.cancelBubble);
                     }
 
                 }else{

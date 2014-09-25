@@ -1,0 +1,2 @@
+/*! Copyright (c) SESHENGHUO.COM - Author: LIJUN - Email: zwlijun@gmail.com - Git: https://github.com/zwlijun/se.lib */
+define(function(require){var a=require("mod/sa/photoplayer"),b=new a("pper");b.create(),b.start()});

@@ -138,6 +138,9 @@
 
         if("1" != bind){
             this.target.on("webkitAnimationStart", "", this, function(e){
+                e.preventDefault();
+                e.stopPropagation();
+
                 var data = e.data;
 
                 data.exec("animationStart", [data.target, data.current]);
@@ -158,6 +161,9 @@
             });
 
             this.target.on("webkitAnimationEnd", "", this, function(e){
+                e.preventDefault();
+                e.stopPropagation();
+
                 var data = e.data;
 
                 data.exec("animationEnd", [data.target, data.current]);
@@ -167,18 +173,30 @@
             });
 
             this.target.on("webkitAnimationIteration", "", this, function(e){
+                e.preventDefault();
+                e.stopPropagation();
+
                 var data = e.data;
 
                 data.exec("animationIteration", [data.target, data.current]);
             });
 
             this.target.on("webkitTransitionEnd", "", this, function(e){
+                e.preventDefault();
+                e.stopPropagation();
+
                 var data = e.data;
+                var target = data.target;
+                var s = target.css(getRealStyle("transition"));
+                var size = s.split(",").length;
+                var tmp = Number(target.attr("data-subqueue") || 0);
+                if(size == ++tmp){
+                    data.exec("transitionEnd", [target, data.current]);
 
-                data.exec("transitionEnd", [data.target, data.current]);
-
-                data.current++;
-                data.__play__();
+                    data.current++;
+                    data.__play__();
+                }
+                target.attr("data-subqueue", tmp);
             });
 
             this.target.attr("data-bindla", "1");
@@ -279,6 +297,8 @@
                                 }else{
                                     conf.values.push("transform " + animate);
                                 }
+
+                                transformFlag = true;
                             }
                         }else{
                             if(prefixs){
@@ -324,8 +344,6 @@
             var pattern = /^([^:]+):([^!]*)!(.+)?$/g;
             var result = null;
             var conf = null;
-            var transform = [];
-            var transformFlag = false;
             var queue = [];
 
             for(var i = 0; i < length; i++){
@@ -371,6 +389,18 @@
                 this.keyframes[kf].print();
             }
         },
+        mergerCss : function(rs, p, ani){
+            var lastChar = /(;\s*)$/g;
+            var _rs = rs.replace(lastChar, "");
+            var _p = p.replace(lastChar, "");
+            var _tmp = (ani || "").split(":")[1] || "";
+
+            var s = (_rs ? _rs + ";" : "")
+                  + (_p ? _p + ";" : "")
+                  + (_tmp && _tmp.length > 1 ? ani : "");
+
+            return s;
+        },
         __play__ : function(){
             var effect = this.queue[this.current];
 
@@ -379,9 +409,7 @@
                 var values = effect.values;
                 var animate = effect.animate;
 
-                var css = this.runtimeStyle + "; "
-                        + properties.join(";") + "; "
-                        + animate.join(";") + ";";
+                var css = this.mergerCss(this.runtimeStyle, properties.join(";"), animate.join(";"));        
 
                 this.runtimeStyle = this.domNode.style.cssText = css; 
             }else{
@@ -399,6 +427,7 @@
         },
         reset : function(){
             this.domNode.style.cssText = this.runtimeStyle = this.backupStyle;
+            this.target.attr("data-subqueue", "0");
             this.current = 0;
         }
     };
@@ -431,7 +460,7 @@
                 },
                 "play" : function(){
                     la.play();
-
+                    
                     return this;
                 },
                 "reset" : function(){

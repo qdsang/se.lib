@@ -15,15 +15,8 @@
         //todo
     };
 
-    var __prevent__ = function(e){
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
     //Action事件委托
     var __onAction = function(e){
-        __prevent__(e);
-
         var cur = $(e.currentTarget);
         var action = cur.attr("data-action") || "";
         var pattern = /^([a-zA-Z0-9_]+):\/\/([a-zA-Z0-9_]+)(#([^#]+))?$/;
@@ -72,6 +65,8 @@
                 }
             }
         }
+
+        return false;
     };
     var _util = {
         //点击事件，如果支持touch，则用tap事件，否则用click事件
@@ -269,7 +264,7 @@
                 body.attr("data-actionhook", "1");
 
                 if("click" != _util.CLICK_EVENT){ //如果不为click，将click事件的默认阻止掉
-                    body.on("click", '[data-action]', __prevent__); 
+                    body.on("click", '[data-action]', false); 
                 }
             }
 

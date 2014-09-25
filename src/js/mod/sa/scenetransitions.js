@@ -15,8 +15,8 @@
     var LA                     = require("mod/sa/lightanimation");
 
     var TransitionEffect = window["TransitionEffect"] = {
-        "ZOOM": "zoom",
-        "ROTATE": "rotate"
+        "ROTATE": "rotate",
+        "SCREEN": "screen"
     };
 
     var Direction = {
@@ -492,22 +492,122 @@
                 moveScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
             }
         },
-        "zoom" : {
+        "screen" : {
             init : function(__super__){
-                Style.css(__super__.scenes, "transformOrigin", "50%, 50%");
+                Style.css(__super__.scenes, "transformOrigin", "50% 50%");
                 Style.css(__super__.scenes, "transitionTimingFunction", "ease-out");
             },
             start : function(__super__, event, x, y, target){
-                __super__.exec("start", [event, x, y, target, __super__]); 
+                var stayScene = null;
+
+                if(__super__.moveDirection > 0){ // prev
+                    __super__.moveIndex = __super__.nextIndex;
+                    __super__.stayIndex = __super__.currentIndex;
+
+                    stayScene = $(__super__.scenes[__super__.stayIndex]);
+
+                    if(Direction.HORZIONTAL == __super__.direction){
+                        //Style.css(stayScene, "transform", "rotateY(0deg) translate(0,0) " + translateZ);
+                    }else{
+                        Style.css(stayScene, "transform", "translate(0,0) " + translateZ);
+                    }
+                }else{ //next
+                    __super__.moveIndex = __super__.currentIndex;
+                    __super__.stayIndex = __super__.prevIndex;
+
+                    stayScene = $(__super__.scenes[__super__.stayIndex]);
+
+                    if(Direction.HORZIONTAL == __super__.direction){
+                        Style.css(stayScene, "transform", "translate(0,0) " + translateZ);
+                    }else{
+                        Style.css(stayScene, "transform", "translate(100%,0) " + translateZ);
+                    }
+                }
+
+                __super__.exec("start", [event, x, y, target, __super__.currentIndex]); 
             },
             end : function(__super__, event, x, y, target){ 
-                __super__.exec("end", [event, x, y, target, __super__]);
+                var stayScene = $(__super__.scenes[__super__.stayIndex]);
+                var moveScene = $(__super__.scenes[__super__.moveIndex]);
+
+                Style.css(moveScene, "transitionDuration", __super__.duration + "s");
+                Style.css(stayScene, "transitionDuration", __super__.duration + "s");
+
+                if(__super__.moveDirection > 0){ //prev
+                    if(Direction.HORZIONTAL == __super__.direction){
+                        Style.css(moveScene, "transform", "translate(-100%,0) " + translateZ);
+                        Style.css(stayScene, "transform", translateZ);
+                    }else{
+                        Style.css(moveScene, "transform", "translate(0,100%) " + translateZ);
+                        Style.css(stayScene, "transform", translateZ);
+                    }
+                }else{ // next
+                    if(Direction.HORZIONTAL == __super__.direction){
+                        Style.css(moveScene, "transform", "translate(0,0) " + translateZ);
+                        Style.css(stayScene, "transform", translateZ);
+                    }else{
+                        Style.css(moveScene, "transform", "translate(0,0) " + translateZ);
+                        Style.css(stayScene, "transform", translateZ);
+                    }
+                }
+
+                __super__.exec("end", [event, x, y, target, __super__.currentIndex]);
             },
             move : function(__super__, event, x, y, target, distance){
-                __super__.exec("drawing", [event, x, y, target, __super__]);
+                var stayScene = $(__super__.scenes[__super__.stayIndex]);
+                var moveScene = $(__super__.scenes[__super__.moveIndex]);
+
+                if(Direction.HORZIONTAL == __super__.direction){
+                    if(__super__.moveDirection > 0){
+                        distance = -100 - 100 / __super__.offset * distance;
+                    }else{
+                        distance = -100 / __super__.offset * distance;
+                    }
+
+                    Style.css(moveScene, "transform", "translate(" + distance + "%,0) " + translateZ);
+                    Style.css(stayScene, "transform", translateZ);
+                }else{
+                    if(__super__.moveDirection > 0){
+                        distance = 100 + 100 / __super__.offset * distance;
+                    }else{
+                        distance = 100 / __super__.offset * distance;
+                    }
+
+                    Style.css(moveScene, "transform", "translate(0," + distance + "%) " + translateZ);
+                    Style.css(stayScene, "transform", translateZ);
+                }
+
+                __super__.exec("drawing", [event, x, y, target, __super__.currentIndex]);
             },
             animate : function(__super__, event, x, y, target, distance) {
-                
+                var stayScene = $(__super__.scenes[__super__.stayIndex]);
+                var moveScene = $(__super__.scenes[__super__.moveIndex]);
+
+                __super__.initiated = 0;
+                __super__.enabled = false;
+
+                Style.css(moveScene, "transitionDuration", __super__.duration + "s");
+                Style.css(stayScene, "transitionDuration", __super__.duration + "s");
+
+                if(__super__.moveDirection > 0){ //prev
+                    if(Direction.HORZIONTAL == __super__.direction){
+                        Style.css(moveScene, "transform", "translate(0,0) " + translateZ);
+                        Style.css(stayScene, "transform", translateZ);
+                    }else{
+                        Style.css(moveScene, "transform", "translate(0,0) " + translateZ);
+                        Style.css(stayScene, "transform", translateZ);
+                    }
+                }else{ // next
+                    if(Direction.HORZIONTAL == __super__.direction){
+                        Style.css(moveScene, "transform", "translate(-100%,0) " + translateZ);
+                        Style.css(stayScene, "transform", translateZ);
+                    }else{
+                        Style.css(moveScene, "transform", "translate(0,100%) " + translateZ);
+                        Style.css(stayScene, "transform", translateZ);
+                    }
+                }
+
+                moveScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
             }
         }
     };
