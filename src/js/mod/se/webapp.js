@@ -101,10 +101,14 @@
         this.scroll = SCROLL.VERTICAL;
         this.widgetMode = WIDGET_MODE.ONCE;
         this.device = {width:320, height:480, ratioWidth:"100%", ratioHeight:"100%"};
+        this.currentIndex = 0;
+        this.lazyLoading = 2;
         this.fps = 0;
+        this.locked = false;
         this.sceneDeg = 28;
         this.sceneDuration = .28;
         this.scenePerspective = "300px";
+        this.sceneTransition = null;
 
         this.listener = new Listener({
             oninit : null,              //初始化时的回调{Function callback, Array args, Object context}
@@ -159,6 +163,13 @@
         },
         setFPS : function(fps){
             this.fps = fps;
+        },
+        setLocked : function(locked){
+            this.locked = locked;
+
+            if(this.sceneTransition){
+                this.sceneTransition.setLocked(this.locked);
+            }
         },
         layout : function(node, view, def, handler){
             $.each(node, function(index, item){
@@ -280,14 +291,13 @@
 
             _ins.preventTouchMove();
 
-            st = ST.newInstance("section", _ins.mode, _ins.scroll);
+            st = this.sceneTransition = ST.newInstance("section", _ins.mode, _ins.scroll);
             st.setDeg(_ins.sceneDeg);
             st.setDuration(_ins.sceneDuration);
             st.setPerspective(_ins.scenePerspective);
 
             st.set("start", {
                 callback: function(e, x, y, target, index){
-
                     this.exec("start", [target, index]);
                 },
                 context: _ins
@@ -300,9 +310,13 @@
             });
             st.set("complete", {
                 callback: function(e, index){
+                    var _ins = this;
+
+                    _ins.currentIndex = index;
                     _ins.showModuleWidget(index);
                     _ins.restoreExceptModuleWidget(index);
-                    this.exec("end", [null, index]);
+                    _ins.execLazyLoading(index);
+                    _ins.exec("end", [null, index]);
                 },
                 context: _ins
             });
@@ -364,6 +378,43 @@
                 "ratioHeight": ((sw * h / w) / sh * 100) + "%"
             };
         },
+        setLazyLoading : function(count){
+            this.lazyLoading = count || 0;
+        },
+        execLazyLoading : function(index){
+            var modules = this.modules || [];
+            var size = modules.length;
+            var module = null;
+
+            if(this.lazyLoading > 0){
+                for(var i = index; i < (index + this.lazyLoading) && i < size; i++){
+                    module = $(modules[i]);
+
+                    if("1" != module.attr("data-lazy")){
+                        this.lazy(module);
+
+                        module.attr("data-lazy", "1");
+                    }
+                }
+            }
+        },
+        lazy : function(module){
+            var lazyItems = module.find("data-lazysrc");
+
+            $.each(lazyItems, function(index, item){
+                var o = $(item);
+
+                o.attr("src", o.attr("data-lazysrc"));
+            });
+
+            lazyItems = module.find("data-lazybg");
+
+            $.each(lazyItems, function(index, item){
+                var o = $(item);
+
+                o.css("background-image", "url(" + o.attr("data-lazybg") + ")");
+            });
+        },
         init : function(){
             var _ins = this;
 
@@ -413,6 +464,16 @@
                 },
                 "setFPS" : function(fps){
                     app.setFPS(fps);
+
+                    return this;
+                },
+                "setLocked" : function(locked){
+                    app.setLocked(locked);
+
+                    return this;
+                },
+                "setLazyLoading" : function(count){
+                    app.setLazyLoading(count);
 
                     return this;
                 },

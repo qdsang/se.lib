@@ -100,7 +100,7 @@
      * @param Object cmds 命令集 @see commands
      */
     function InjectCommands(cmds){
-        $.extend(commands, cmds);
+        $.extend(true, commands, cmds);
     }
 
     /**
@@ -108,7 +108,7 @@
      * @param Object errInfo 错误信息 @see ErrorMap
      */
     function InjectErrorInfo(errInfo){
-        $.extend(ErrorMap, errInfo);
+        $.extend(true, ErrorMap, errInfo);
     }
 
     /**
@@ -140,7 +140,7 @@
     function CloneCMD(obj){
         var cmd = {};
 
-        cmd = $.extend(cmd, obj);
+        cmd = $.extend(true, cmd, obj);
 
         return cmd;
     }
@@ -179,7 +179,7 @@
         cmd.traditional = ajaxSetting.traditional || true;
         cmd.type = ajaxSetting.type || cmd.method;
 
-        cmd = $.extend(cmd, ajaxSetting);
+        cmd = $.extend(true, cmd, ajaxSetting);
         cmd.xhrFields = ajaxSetting.xhrFields || {};
 
         if(true === cmd.cross){

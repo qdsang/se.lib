@@ -16,7 +16,9 @@
 
     var TransitionEffect = window["TransitionEffect"] = {
         "ROTATE": "rotate",
-        "SCREEN": "screen"
+        "SCREEN": "screen",
+        "ZOOM": "zoom",
+        "SCALE": "scale"
     };
 
     var Direction = {
@@ -50,6 +52,7 @@
         this.moveDirection = 0;
         this.lockedDirection = undefined;
         //------------
+        this.locked = false;
         this.drawing = false;
         this.moved = false;
         this.enabled = true;
@@ -135,6 +138,9 @@
         },
         setPerspective : function(perspective){
             this.perspective = perspective;
+        },
+        setLocked : function(locked){
+            this.locked = locked;
         },
         layout : function(){
             var scenes = this.scenes;
@@ -292,6 +298,10 @@
                 var data = e.data;
                 var target = e.currentTarget;
                 var pointer = data.getPointerPosition(e);
+
+                if(data.locked){
+                    return 0;
+                }
                 
                 if(!data.enabled || (data.initiated && data.initiated !== 1)){
                     return 0;
@@ -311,6 +321,10 @@
                 var data = e.data;
                 var target = e.currentTarget;
                 var pointer = data.getPointerPosition(e);
+
+                if(data.locked){
+                    return 0;
+                }
                 
                 if(!data.enabled || 1 != data.initiated){
                     return 0;
@@ -334,6 +348,10 @@
                 var pointer = data.getPointerPosition(e);
                 var args = [e, pointer.x, pointer.y, target];
 
+                if(data.locked){
+                    return 0;
+                }
+
                 if(!data.enabled || 1 !== data.initiated){
                     return 0;
                 }
@@ -356,7 +374,7 @@
                     data.effect("start", args);
                 }
 
-                if(absDistance < data.offset / 3){
+                if(absDistance < data.offset * 0.1){
                     data.effect("move", args.concat(distance));
                 }else{
                     data.flipped = true;
@@ -492,6 +510,7 @@
                 moveScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
             }
         },
+        //---------------------------------------
         "screen" : {
             init : function(__super__){
                 Style.css(__super__.scenes, "transformOrigin", "50% 50%");
@@ -565,7 +584,7 @@
                     }
 
                     Style.css(moveScene, "transform", "translate(" + distance + "%,0) " + translateZ);
-                    Style.css(stayScene, "transform", translateZ);
+                    Style.css(stayScene, "transform", "translate(" + (distance - 100) + "%,0) " + translateZ);
                 }else{
                     if(__super__.moveDirection > 0){
                         distance = 100 + 100 / __super__.offset * distance;
@@ -574,7 +593,7 @@
                     }
 
                     Style.css(moveScene, "transform", "translate(0," + distance + "%) " + translateZ);
-                    Style.css(stayScene, "transform", translateZ);
+                    Style.css(stayScene, "transform", "translate(0," + (distance - 100) + "%) " + translateZ);
                 }
 
                 __super__.exec("drawing", [event, x, y, target, __super__.currentIndex]);
@@ -592,24 +611,298 @@
                 if(__super__.moveDirection > 0){ //prev
                     if(Direction.HORZIONTAL == __super__.direction){
                         Style.css(moveScene, "transform", "translate(0,0) " + translateZ);
-                        Style.css(stayScene, "transform", translateZ);
+                        Style.css(stayScene, "transform", "translate(-100%,0) " + translateZ);
                     }else{
                         Style.css(moveScene, "transform", "translate(0,0) " + translateZ);
-                        Style.css(stayScene, "transform", translateZ);
+                        Style.css(stayScene, "transform", "translate(0,-100%) " + translateZ);
                     }
                 }else{ // next
                     if(Direction.HORZIONTAL == __super__.direction){
                         Style.css(moveScene, "transform", "translate(-100%,0) " + translateZ);
-                        Style.css(stayScene, "transform", translateZ);
+                        Style.css(stayScene, "transform", "translate(0,0) " + translateZ);
                     }else{
                         Style.css(moveScene, "transform", "translate(0,100%) " + translateZ);
-                        Style.css(stayScene, "transform", translateZ);
+                        Style.css(stayScene, "transform", "translate(0,0) " + translateZ);
                     }
                 }
 
                 moveScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
             }
-        }
+        },
+        //---------------------------------------
+        "zoom" : {
+            init : function(__super__){
+                Style.css(__super__.scenes, "transformOrigin", "50% 50%");
+                Style.css(__super__.scenes, "transitionTimingFunction", "ease-out");
+            },
+            start : function(__super__, event, x, y, target){
+                var stayScene = null;
+                var moveScene = null;
+
+                if(__super__.moveDirection > 0){ // prev
+                    __super__.moveIndex = __super__.nextIndex;
+                    __super__.stayIndex = __super__.currentIndex;
+
+                    moveScene = $(__super__.scenes[__super__.moveIndex]);
+                    Style.css(moveScene, "transform", "translate(0,0) scale(2) " + translateZ);
+                    Style.css(moveScene, "opacity", 0);
+                }else{ //next
+                    __super__.moveIndex = __super__.currentIndex;
+                    __super__.stayIndex = __super__.prevIndex;
+
+                    stayScene = $(__super__.scenes[__super__.stayIndex]);
+
+                    Style.css(stayScene, "transform", "translate(0,0) scale(.5) " + translateZ);
+                    Style.css(stayScene, "opacity", 0);
+                }
+
+                __super__.exec("start", [event, x, y, target, __super__.currentIndex]); 
+            },
+            end : function(__super__, event, x, y, target){ 
+                var stayScene = $(__super__.scenes[__super__.stayIndex]);
+                var moveScene = $(__super__.scenes[__super__.moveIndex]);
+
+                Style.css(moveScene, "transitionDuration", __super__.duration + "s");
+                Style.css(stayScene, "transitionDuration", __super__.duration + "s");
+
+                if(__super__.moveDirection > 0){ //prev
+                    Style.css(moveScene, "transform", "scale(2) " + translateZ);
+                    Style.css(moveScene, "opacity", 0);
+                    Style.css(stayScene, "transform", "scale(1) " + translateZ);
+                    Style.css(stayScene, "opacity", 1);
+                }else{ // next
+                    Style.css(moveScene, "transform", "scale(1) " + translateZ);
+                    Style.css(moveScene, "opacity", 1);
+                    Style.css(stayScene, "transform", "scale(.5) " + translateZ);
+                }
+
+                __super__.exec("end", [event, x, y, target, __super__.currentIndex]);
+            },
+            move : function(__super__, event, x, y, target, distance){
+                var stayScene = $(__super__.scenes[__super__.stayIndex]);
+                var moveScene = $(__super__.scenes[__super__.moveIndex]);
+                var opacity = 0;
+                var stayScale = 0;
+                var moveScale = 0;
+
+                opacity = Math.min(1 / __super__.offset * Math.abs(distance) * 1.5, 1);
+
+                if(__super__.moveDirection > 0){
+                    stayScale = 1 - .5 / __super__.offset * Math.abs(distance);
+                    moveScale = 2 - 2 / __super__.offset * Math.abs(distance);
+
+                    Style.css(moveScene, "transform", "scale(" + moveScale + ") " + translateZ);
+                    Style.css(moveScene, "opacity", opacity);
+                    Style.css(stayScene, "transform", "scale(" + stayScale + ") " + translateZ);
+                    Style.css(stayScene, "opacity", 1 - opacity);
+                }else{
+                    stayScale = .5 + .5 / __super__.offset * Math.abs(distance);
+                    moveScale = 1 + 1 / __super__.offset * Math.abs(distance);
+
+                    Style.css(moveScene, "transform", "scale(" + moveScale + ") " + translateZ);
+                    Style.css(moveScene, "opacity", 1 - opacity);
+                    Style.css(stayScene, "transform", "scale(" + stayScale + ") " + translateZ);
+                    Style.css(stayScene, "opacity", opacity);
+                }
+
+                __super__.exec("drawing", [event, x, y, target, __super__.currentIndex]);
+            },
+            animate : function(__super__, event, x, y, target, distance) {
+                var stayScene = $(__super__.scenes[__super__.stayIndex]);
+                var moveScene = $(__super__.scenes[__super__.moveIndex]);
+
+                __super__.initiated = 0;
+                __super__.enabled = false;
+
+                Style.css(moveScene, "transitionDuration", __super__.duration + "s");
+                Style.css(stayScene, "transitionDuration", __super__.duration + "s");
+
+                if(__super__.moveDirection > 0){ //prev
+                    Style.css(moveScene, "transform", "scale(1) " + translateZ);
+                    Style.css(moveScene, "opacity", 1);
+                    Style.css(stayScene, "transform", "scale(.5) " + translateZ);
+                }else{ // next
+                    Style.css(moveScene, "transform", "scale(2) " + translateZ);
+                    Style.css(moveScene, "opacity", 0);
+                    Style.css(stayScene, "transform", "scale(1) " + translateZ);
+                    Style.css(stayScene, "opacity", 1);
+                }
+
+                moveScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
+            }
+        },
+        //---------------------------------------
+        "scale" : {
+            init : function(__super__){
+                Style.css(__super__.scenes, "transformOrigin", "50% 50%");
+                Style.css(__super__.scenes, "transitionTimingFunction", "ease-out");
+            },
+            start : function(__super__, event, x, y, target){
+                var stayScene = null;
+                var moveScene = null;
+
+                if(__super__.moveDirection > 0){ // prev
+                    __super__.moveIndex = __super__.nextIndex;
+                    __super__.stayIndex = __super__.currentIndex;
+
+                    stayScene = $(__super__.scenes[__super__.stayIndex]);
+                    moveScene = $(__super__.scenes[__super__.moveIndex]);
+
+                    Style.css(moveScene, "transform", "translate(0,0) scale(2) " + translateZ);
+                    //Style.css(moveScene, "opacity", 0);
+
+                    if(Direction.HORZIONTAL == __super__.direction){
+                        //Style.css(stayScene, "transform", "rotateY(0deg) translate(0,0) " + translateZ);
+                    }else{
+                        Style.css(stayScene, "transform", "translate(0,0) " + translateZ);
+                    }
+                }else{ //next
+                    __super__.moveIndex = __super__.currentIndex;
+                    __super__.stayIndex = __super__.prevIndex;
+
+                    stayScene = $(__super__.scenes[__super__.stayIndex]);
+                    moveScene = $(__super__.scenes[__super__.moveIndex]);
+
+                    if(Direction.HORZIONTAL == __super__.direction){
+                        Style.css(stayScene, "transform", "translate(0,0) scale(.5) " + translateZ);
+                    }else{
+                        Style.css(stayScene, "transform", "translate(100%,0) scale(.5) " + translateZ);
+                    }
+
+                    //Style.css(stayScene, "opacity", 0);
+                }
+
+                __super__.exec("start", [event, x, y, target, __super__.currentIndex]); 
+            },
+            end : function(__super__, event, x, y, target){ 
+                var stayScene = $(__super__.scenes[__super__.stayIndex]);
+                var moveScene = $(__super__.scenes[__super__.moveIndex]);
+
+                Style.css(moveScene, "transitionDuration", __super__.duration + "s");
+                Style.css(stayScene, "transitionDuration", __super__.duration + "s");
+
+                if(__super__.moveDirection > 0){ //prev
+                    if(Direction.HORZIONTAL == __super__.direction){
+                        Style.css(moveScene, "transform", "translate(-100%,0) scale(2) " + translateZ);
+                        //Style.css(moveScene, "opacity", 0);
+                        Style.css(stayScene, "transform", "scale(1) " + translateZ);
+                        //Style.css(stayScene, "opacity", 1);
+                    }else{
+                        Style.css(moveScene, "transform", "translate(0,100%) scale(1) " + translateZ);
+                        //Style.css(moveScene, "opacity", 0);
+                        Style.css(stayScene, "transform", "scale(1) " + translateZ);
+                        //Style.css(stayScene, "opacity", 1);
+                    }
+                }else{ // next
+                    if(Direction.HORZIONTAL == __super__.direction){
+                        Style.css(moveScene, "transform", "translate(0,0) scale(1) " + translateZ);
+                        //Style.css(moveScene, "opacity", 1);
+                        Style.css(stayScene, "transform", "scale(.5) " + translateZ);
+                    }else{
+                        Style.css(moveScene, "transform", "translate(0,0) scale(1) " + translateZ);
+                        //Style.css(moveScene, "opacity", 1);
+                        Style.css(stayScene, "transform", "scale(.5) " + translateZ);
+                    }
+                }
+
+                __super__.exec("end", [event, x, y, target, __super__.currentIndex]);
+            },
+            move : function(__super__, event, x, y, target, distance){
+                var stayScene = $(__super__.scenes[__super__.stayIndex]);
+                var moveScene = $(__super__.scenes[__super__.moveIndex]);
+                //var opacity = 0;
+                var stayScale = 0;
+                var moveScale = 0;
+                //var stayOpacity = opacity;
+                //var moveOpacity = opacity;
+
+                //opacity = Math.min(1 / __super__.offset * Math.abs(distance) * 1.5, 1);
+
+                if(Direction.HORZIONTAL == __super__.direction){
+                    if(__super__.moveDirection > 0){
+                        distance = -100 - 100 / __super__.offset * distance;
+
+                        stayScale = 1 - .5 / __super__.offset * Math.abs(distance);
+                        moveScale = 2 - 2 / __super__.offset * Math.abs(distance);
+
+                        //moveOpacity = opacity;
+                        //stayOpacity = 1 - opacity;
+                    }else{
+                        distance = -100 / __super__.offset * distance;
+
+                        stayScale = .5 + .5 / __super__.offset * Math.abs(distance);
+                        moveScale = 1 + 1 / __super__.offset * Math.abs(distance);
+
+                        //moveOpacity = 1 - opacity;
+                        //stayOpacity = opacity;
+                    }
+
+                    Style.css(moveScene, "transform", "translate(" + distance + "%,0) scale(" + moveScale + ") " + translateZ);
+                    //Style.css(moveScene, "opacity", moveOpacity);
+                    Style.css(stayScene, "transform", "translate(" + (distance - 100) + "%,0) scale(" + stayScale + ") " + translateZ);
+                    //Style.css(stayScene, "opacity", stayOpacity);
+                }else{
+                    if(__super__.moveDirection > 0){
+                        distance = 100 + 100 / __super__.offset * distance;
+
+                        stayScale = 1 - .5 / __super__.offset * Math.abs(distance);
+                        moveScale = 2 - 2 / __super__.offset * Math.abs(distance);
+
+                        //moveOpacity = opacity;
+                        //stayOpacity = 1 - opacity;
+                    }else{
+                        distance = 100 / __super__.offset * distance;
+
+                        stayScale = .5 + .5 / __super__.offset * Math.abs(distance);
+                        moveScale = 1 + 1 / __super__.offset * Math.abs(distance);
+
+                        //moveOpacity = 1 - opacity;
+                        //stayOpacity = opacity;
+                    } 
+
+                    Style.css(moveScene, "transform", "translate(0," + distance + "%) scale(" + moveScale + ") " + translateZ);
+                    //Style.css(moveScene, "opacity", moveOpacity);
+                    Style.css(stayScene, "transform", "translate(0," + (distance - 100) + "%) scale(" + stayScale + ") " + translateZ);
+                    //Style.css(stayScene, "opacity", stayOpacity);
+                }
+
+                __super__.exec("drawing", [event, x, y, target, __super__.currentIndex]);
+            },
+            animate : function(__super__, event, x, y, target, distance) {
+                var stayScene = $(__super__.scenes[__super__.stayIndex]);
+                var moveScene = $(__super__.scenes[__super__.moveIndex]);
+
+                __super__.initiated = 0;
+                __super__.enabled = false;
+
+                Style.css(moveScene, "transitionDuration", __super__.duration + "s");
+                Style.css(stayScene, "transitionDuration", __super__.duration + "s");
+
+                if(__super__.moveDirection > 0){ //prev
+                    if(Direction.HORZIONTAL == __super__.direction){
+                        Style.css(moveScene, "transform", "translate(0,0) scale(1) " + translateZ);
+                        Style.css(stayScene, "transform", "translate(-100%,0) scale(.5) " + translateZ);
+                    }else{
+                        Style.css(moveScene, "transform", "translate(0,0)  scale(1) " + translateZ);
+                        Style.css(stayScene, "transform", "translate(0,-100%)  scale(.5) " + translateZ);
+                    }
+                    //Style.css(moveScene, "opacity", 1);
+                }else{ // next
+                    if(Direction.HORZIONTAL == __super__.direction){
+                        Style.css(moveScene, "transform", "translate(-100%,0) scale(2) " + translateZ);
+                        Style.css(stayScene, "transform", "translate(0,0) scale(1) " + translateZ);
+                    }else{
+                        Style.css(moveScene, "transform", "translate(0,100%) scale(2) " + translateZ);
+                        Style.css(stayScene, "transform", "translate(0,0) scale(1) " + translateZ);
+                    }
+                }
+
+                //Style.css(moveScene, "opacity", 0);
+                //Style.css(stayScene, "opacity", 1);
+
+                moveScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
+            }
+        }//---------------------------------------
     };
 
     var _pub = {
@@ -619,6 +912,11 @@
             return {
                 "set" : function(type, option){
                     st.set(type, option);
+
+                    return this;
+                },
+                "setLocked" : function(locked){
+                    st.setLocked(locked);
 
                     return this;
                 },

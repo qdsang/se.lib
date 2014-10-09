@@ -255,15 +255,16 @@
         /**
          * 设置Action勾子         
          */
-        setActionHook : function(selector){
+        setActionHook : function(selector, eventType){
             var body = $(selector || "body");
             var setting = body.attr("data-actionhook");
+            var type = eventType ? eventType : _util.CLICK_EVENT;
 
             if("1" != setting){
-                body.on(_util.CLICK_EVENT, '[data-action]', __onAction);                
+                body.on(type, '[data-action]', __onAction);                
                 body.attr("data-actionhook", "1");
 
-                if("click" != _util.CLICK_EVENT){ //如果不为click，将click事件的默认阻止掉
+                if("click" != type){ //如果不为click，将click事件的默认阻止掉
                     body.on("click", '[data-action]', false); 
                 }
             }
@@ -275,7 +276,7 @@
          * @param Object action action配置
          */
         injectAction : function(action){
-            $.extend($.Action, action);
+            $.extend(true, $.Action, action);
         },
         /**
          * 获取设备的像素比

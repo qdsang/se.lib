@@ -138,68 +138,28 @@
 
         if("1" != bind){
             this.target.on("webkitAnimationStart", "", this, function(e){
-                e.preventDefault();
-                e.stopPropagation();
-
                 var data = e.data;
 
-                data.exec("animationStart", [data.target, data.current]);
-
-                var it = "animationIterationCount";
-                var pit = getRealStyle(it);
-
-                var itc = data.domNode.style[it];
-
-                if(pit){
-                    itc = data.domNode.style[pit];
-                }
-
-                if("infinite" == itc){
-                    data.current++;
-                    data.__play__();
-                }
+                data.animationStart(e);
             });
 
             this.target.on("webkitAnimationEnd", "", this, function(e){
-                e.preventDefault();
-                e.stopPropagation();
-
                 var data = e.data;
 
-                data.exec("animationEnd", [data.target, data.current]);
-
-                data.current++;
-                data.__play__();
+                data.animationEnd(e);
             });
 
             this.target.on("webkitAnimationIteration", "", this, function(e){
-                e.preventDefault();
-                e.stopPropagation();
-
                 var data = e.data;
 
-                data.exec("animationIteration", [data.target, data.current]);
+                data.animationIteration(e);
             });
 
             this.target.on("webkitTransitionEnd", "", this, function(e){
-                e.preventDefault();
-                e.stopPropagation();
-
                 var data = e.data;
-                var target = data.target;
-                var s = target.css(getRealStyle("transition"));
-                var size = s.split(",").length;
-                var tmp = Number(target.attr("data-subqueue") || 0);
-                if(size == ++tmp){
-                    data.exec("transitionEnd", [target, data.current]);
-
-                    data.current++;
-                    data.__play__();
-                }
-                target.attr("data-subqueue", tmp);
+                
+                data.transitionEnd(e);
             });
-
-            this.target.attr("data-bindla", "1");
         }
     };
 
@@ -241,6 +201,64 @@
          */
         clear : function(){
             this.listener.clear();
+        },
+        animationStart : function(e){
+            e.preventDefault();
+            e.stopPropagation();
+
+            var data = this;
+
+            data.exec("animationStart", [data.target, data.current]);
+
+            var it = "animationIterationCount";
+            var pit = getRealStyle(it);
+
+            var itc = data.domNode.style[it];
+
+            if(pit){
+                itc = data.domNode.style[pit];
+            }
+
+            if("infinite" == itc){
+                data.current++;
+                data.__play__();
+            }
+        },
+        animationEnd : function(e){
+            e.preventDefault();
+            e.stopPropagation();
+
+            var data = this;
+
+            data.exec("animationEnd", [data.target, data.current]);
+
+            data.current++;
+            data.__play__();
+        },
+        animationIteration : function(e){
+            e.preventDefault();
+            e.stopPropagation();
+
+            var data = this;
+
+            data.exec("animationIteration", [data.target, data.current]);
+        },
+        transitionEnd : function(e){
+            e.preventDefault();
+            e.stopPropagation();
+
+            var data = this;
+            var target = data.target;
+            var s = target.css(getRealStyle("transition"));
+            var size = s.split(",").length;
+            var tmp = Number(target.attr("data-subqueue") || 0);
+            if(size == ++tmp){
+                data.exec("transitionEnd", [target, data.current]);
+
+                data.current++;
+                data.__play__();
+            }
+            target.attr("data-subqueue", tmp);
         },
         parse : function(source){
             var schemaSeparator = "::";
@@ -377,6 +395,9 @@
             return queue;
 
         },
+        clearKeyFrames : function(){
+            this.keyframes = {};
+        },
         addKeyFrame : function(name, frame, properties){
             if(!(name in this.keyframes)){
                 this.keyframes[name] = new _KeyFrame(name);
@@ -420,6 +441,12 @@
             this.source = source;
             this.queue = this.parse(source);
         },
+        updateTarget : function(target){
+            this.target = $(target);
+            this.domNode = this.target[0];
+            this.backupStyle = this.domNode.style.cssText;
+            this.runtimeStyle = this.backupStyle;
+        },
         play : function(){
             this.reset();
 
@@ -450,6 +477,16 @@
                 },
                 "printKeyFrames" : function(){
                     la.printKeyFrames();
+
+                    return this;
+                },
+                "clearKeyFrames" : function(){
+                    la.clearKeyFrames();
+
+                    return this;
+                },
+                "updateTarget" : function(target){
+                    la.updateTarget(target);
 
                     return this;
                 },

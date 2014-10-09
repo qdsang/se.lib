@@ -36,6 +36,7 @@
         this.size = this.photos.length;
         this.ready = false;
         this.moving = false;
+        this.killed = undefined;
         this.count = 0;
         this.startX = 0;
         this.startY = 0;
@@ -96,6 +97,10 @@
                     return;
                 }
 
+                if(undefined !== data.killed && true !== data.killed){
+                    return;
+                }
+
                 if(data.runing){
                     return;
                 }
@@ -111,14 +116,14 @@
 
                 ps.set("end", {
                     callback: function(target){
-                        this.runing = false;
-
                         var t = $(target);
                         var index = Number(t.attr("data-photoIndex"));
-                        var la = LA.newInstance(target, this.animate);
-                        var listener = this.fadeinAnimation[index] || la;
+                        var la = this.fadeinAnimation[index]; 
 
-                        listener.set("complete", {
+                        la.source(this.animate);
+                        la.updateTarget(target);
+
+                        la.set("complete", {
                             callback: function(target, index){
                                 var t = $(target);
                                 t.css({
@@ -127,6 +132,8 @@
                                     "z-index": 1,
                                     "opacity": 1
                                 });
+
+                                this.killed = true;
 
                                 if(index === 0){
                                     this.photos.css("z-index", 2);
@@ -137,6 +144,8 @@
                         });
 
                         la.play();
+
+                        this.runing = false;
                     },
                     args: [e.target],
                     context: data
@@ -172,10 +181,15 @@
                     return;
                 }
 
+                if(undefined !== data.killed && true !== data.killed){
+                    return;
+                }
+
                 data.stopX = pointer.x;
                 data.stopY = pointer.y;
                 data.moving = false;
                 data.runing = true;
+                data.killed = false;
 
                 data.stopPosition = new Vector2D(data.stopX, data.stopY);
                 
@@ -204,15 +218,14 @@
             });
         },
         run : function(target){
-            var timer = null;
-            var ended = false;
             var _ins = this;
 
             (function(){
                 _ins.step(target);
 
-                if(_ins.runing)
-                    setTimeout(arguments.callee, 10);
+                if(_ins.runing){
+                    _ins.timer = setTimeout(arguments.callee, 10);
+                }
             })();
         },
         create : function(){
