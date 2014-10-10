@@ -19,7 +19,7 @@
     var __onAction = function(e){
         var cur = $(e.currentTarget);
         var action = cur.attr("data-action") || "";
-        var pattern = /^([a-zA-Z0-9_]+):\/\/([a-zA-Z0-9_]+)(#([^#]+))?$/;
+        var pattern = /^([a-zA-Z0-9_]+):\/\/([a-zA-Z0-9_\/]+)(#([^#]+))?$/;
         var result = pattern.exec(action);
         var _class = null;
         var _className = null;
@@ -57,7 +57,7 @@
                         return c;
                     })(_class, _pkgs, _size);
 
-                    _method = _pkgs[size - 1];
+                    _method = _pkgs[_size - 1];
                 }
 
                 if(null != _class && (_method in _class)){

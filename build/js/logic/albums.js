@@ -1,0 +1,2 @@
+/*! Copyright (c) SESHENGHUO.COM - Author: LIJUN - Email: zwlijun@gmail.com - Git: https://github.com/zwlijun/se.lib */
+define(function(require){var a=require("mod/sa/albums"),b=$.app,c=a.newInstance("albums",".webapp-view");c.set("show",{callback:function(){console.info("show"),b.setLocked(!0)}}),c.set("hidden",{callback:function(){console.info("hidden"),b.setLocked(!1)}}),c.create()});
