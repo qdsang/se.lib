@@ -137,7 +137,7 @@
             st = ST.newInstance(list, mode, scroll);
 
             st.set("shift", {
-                callback: function(e, x, y, shiftX, shiftY, distance, scroll, hidden, _st){
+                callback: function(e, x, y, shiftX, shiftY, distance, index, scroll, hidden, _st){
                     var sx = Math.abs(shiftX);
                     var sy = Math.abs(shiftY);
                     var isHidden = false;
