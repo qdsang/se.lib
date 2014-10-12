@@ -12,12 +12,10 @@
 ;define(function SceneTransitions(require, exports, module){
     var Listener = $.Listener  = require("mod/se/listener");
     var Style                  = require("mod/polyfill/css");
-    var LA                     = require("mod/sa/lightanimation");
 
     var TransitionEffect = window["TransitionEffect"] = {
         "ROTATE": "rotate",
         "SCREEN": "screen",
-        "ZOOM": "zoom",
         "SCALE": "scale"
     };
 
@@ -27,63 +25,59 @@
     };
 
     var translateZ = Style.hasProperty("perspective") ? "translateZ(0)" : "";
+    var touch = ("ontouchstart" in window);
+    var startEvent = touch ? "touchstart" : "mousedown";
+    var endEvent = touch ? "touchend" : "mouseup";
+    var moveEvent = touch ? "touchmove" : "mousemove";
 
     var _SceneTransitions = function(snap, effect, direction){
         this.snap = snap;
         this.scenes = $(snap);
-        this.index = 0;
         this.size = this.scenes.length;
-        this.parent = this.scenes.parent();
-        //------------
-        this.currentIndex = 0;
-        this.nextIndex = 1;
-        this.prevIndex = this.size - 1;
-        this.lastIndex = this.size - 1;
-        this.moveIndex = undefined;
-        this.stayIndex = undefined;
-        //------------
-        this.currentZIndex = 3;
-        this.nextZIndex = 4;
-        this.prevZIndex = 2;
-        this.queueZIndex = 1;
-        //------------
+        this.stage = this.scenes.parent();
+
         this.transitionEffect = effect || TransitionEffect.ROTATE;
         this.direction = direction || Direction.VERTICAL;
-        this.moveDirection = 0;
-        this.lockedDirection = undefined;
-        //------------
-        this.locked = false;
-        this.drawing = false;
-        this.moved = false;
+        this.moveDirection = 1; //1: prev, -1: next
+        this.lockedDirection = 0;
+
+        this.lastIndex = Math.max(this.size - 1, 0);
+
+        this.enterScene = undefined;
+        this.exitScene = undefined;
+
         this.enabled = true;
-        this.flipped = false;
-        this.initiated = 0;
+        this.locked = false;
+        this.touched = false; //true: touch事件   false: 无事件/transition事件
+        this.animate = false;
         this.startX = 0;
         this.startY = 0;
-        this.shift = 0;
-        this.offset = 0;
-        //-------------
+        this.endX = 0;
+        this.endY = 0;
+
         this.deg = 28;
+        this.screenScale = .7;
         this.duration = .28;
         this.perspective = "300px";
-
-        this.listener = new Listener({
-            onstart: null,
-            ondrawing: null,
-            onend: null,
-            oncomplete: null
-        });
-
-        var offset = this.parent.offset();
+        
+        var offset = this.stage.offset();
         this.offset = (Direction.HORZIONTAL == this.direction ? offset.width : offset.height);
 
         if(effect in this){
-            this.page(this.currentIndex);
+            this.updateSceneIndex(0);
             this.bind();
-            this.effect("init", []);
+            this.run("init", []);
         }else{
             throw new Error("this effect(" + effect + ") not yet implemented.");
         }
+
+        this.listener = new Listener({
+            onshift: null,
+            onstart: null,
+            onmove: null,
+            onend: null,
+            oncomplete: null
+        });       
     };
 
     _SceneTransitions.prototype = {
@@ -125,10 +119,16 @@
         clear : function(){
             this.listener.clear();
         },
-        effect : function(method, args){
-            var api = this[this.transitionEffect];
+        run : function(method, args){
+            var ins = this;
+            var api = ins[ins.transitionEffect];
 
-            api[method].apply(api, [this].concat(args));
+            var context = {
+                "super": this,
+                "effect": api
+            };
+
+            api[method].apply(context, args);
         },
         setDeg : function(deg){
             this.deg = deg;
@@ -139,133 +139,48 @@
         setPerspective : function(perspective){
             this.perspective = perspective;
         },
+        setScreenScale : function(scale){
+            this.screenScale = scale;
+        },
         setLocked : function(locked){
             this.locked = locked;
         },
-        layout : function(){
-            var scenes = this.scenes;
-            var size = this.size;
-            var scene = null;
-            var currentIndex = this.currentIndex;
-            var lastIndex = this.lastIndex;
-            var nextIndex = this.nextIndex = (currentIndex + 1 > lastIndex ? 0 : currentIndex + 1);
-            var prevIndex = this.prevIndex = (currentIndex - 1 < 0 ? lastIndex : currentIndex - 1);
+        updateSceneIndex : function(index){
+            this.currentIndex = index;
+            this.prevIndex = (0 >= index ? this.lastIndex : index - 1);
+            this.nextIndex = (this.lastIndex === index ? 0 : index + 1);
 
-            for(var i = 0; i < size; i++){
-                scene = $(scenes[i]);
-                scene.css("visibility", "hidden");
-                if(i === currentIndex){ //当前显示
-                    scene.css("z-index", this.currentZIndex);
-                    scene.css("visibility", "visible");
-                    Style.css(scene, "transform", "translate(0, 0) " + translateZ);
-                }else if(i === nextIndex){ //下一个
-                    scene.css("z-index", this.nextZIndex);
-                    scene.css("visibility", "visible");
-                    Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == this.direction ? "100%,0" : "0,100%") + ") " + translateZ);
-                }else if(i === prevIndex){ //上一个
-                    scene.css("z-index", this.prevZIndex);
-                    scene.css("visibility", "visible");
-                    Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == this.direction ? "0,100%" : "100%,0") + ") " + translateZ);
-                }
-            }
-        },
-        getPointerPosition : function(e){
-            var data = e.data;
-
-            if(e.changedTouches){
-                e = e.changedTouches[e.changedTouches.length - 1];
-            }
-
-            var x = 0;
-            var y = 0;
-            var clientX = e.clientX;
-            var clientY = e.clientY;
-            var body = document.body;
-            var scrollLeft = body.scrollLeft;
-            var scrollTop = body.scrollTop;
-            var stage = $(data.scenes[data.currentIndex]);
-            var offset = stage.offset();
-
-            this.stageOffsetX = offset.left;
-            this.stageOffsetY = offset.top;
-
-                
-            x = (clientX + scrollLeft || e.pageX) - offset.left || 0;
-            y = (clientY + scrollTop || e.pageY) - offset.top || 0;
-
-            return {"x": x, "y": y};
-        },
-        page : function(n){
-            if("last" == n){
-                n = this.lastIndex;
-            }else if("prev" == n){
-                n--;
-            }else if("next" == n){
-                n++;
-            }
-
-            if(n < 0){
-                n = 0;
-            }else if(n > this.lastIndex){
-                n = this.lastIndex;
-            }
-
-            var prev = n - 1;
-            var next = n + 1;
-
-            if(prev < 0){
-                prev = this.lastIndex;
-            }
-
-            if(next > this.lastIndex){
-                next = 0;
-            }
-
-            this.currentIndex = n;
-            this.nextIndex = next;
-            this.prevIndex = prev;
-
-            this.layout();
-
-        },
-        update : function(){
-            var newIndex = this.index + this.moveIndex;
-            var updateIndex = this.moveIndex > 0 ? this.nextIndex : this.prevIndex;
-
-            if(newIndex < 0){
-                newIndex = this.lastIndex;
-            }else if(newIndex > this.lastIndex){
-                newIndex = 0;
-            }
-
-            //doupdate
+            this.currentScene = $(this.scenes[this.currentIndex]) || null;
+            this.nextScene = $(this.scenes[this.nextIndex]) || null;
+            this.prevScene = $(this.scenes[this.prevIndex]) || null;
 
             this.enabled = true;
+
+            this.run("layout", []);
+        },
+        preventDefault : function(){
+            var ins = this;
+            var stage = ins.stage;
+
+            stage.on(startEvent + " " + drawingEvent + " " + endEvent, function(e){e.preventDefault()});
+        },
+        cancelBubble : function(){
+            var ins = this;
+            var stage = ins.stage;
+
+            stage.on(startEvent + " " + drawingEvent + " " + endEvent, function(e){e.stopPropagation()});
         },
         complete : function(e){
             var data = e.data;
             var target = e.currentTarget;
 
-            if(target != data.scenes[data.moveIndex]){
+            if(target != data.exitScene[0]){
                 return 0;
             }
 
             Style.css(data.scenes, "transitionDuration", "0s");
 
-            if(!data.flipped){
-                data.enabled = true;
-                return 0;
-            }
-
-            data.index += data.moveDirection;
-
-            if(data.index > data.lastIndex){
-                data.index = 0;
-            }else if(data.index < 0){
-                data.index = data.lastIndex;
-            }
-
-            data.currentIndex += data.moveDirection;
+            data.currentIndex -= data.moveDirection;
 
             if(data.currentIndex > data.lastIndex){
                 data.currentIndex = 0;
@@ -273,643 +188,607 @@
                 data.currentIndex = data.lastIndex;
             }
 
-            data.prevIndex = data.currentIndex - 1;
-            if(data.prevIndex < 0){
-                data.prevIndex = data.lastIndex;
-            }
-
-            data.nextIndex = data.currentIndex + 1;
-            if(data.nextIndex > data.lastIndex){
-                data.nextIndex = 0;
-            }
-
-            data.layout();
-            data.update();
+            data.updateSceneIndex(data.currentIndex);
 
             data.exec("complete", [e, data.currentIndex]);
+
+            if(!data.animate){
+                data.enabled = true;
+                return 0;
+            }
         },
         bind : function(){
-            var touch = ("ontouchstart" in window);
-            var startEvent = touch ? "touchstart" : "mousedown";
-            var endEvent = touch ? "touchend" : "mouseup";
-            var drawingEvent = touch ? "touchmove" : "mousemove";
+            var ins = this;
+            var stage = ins.stage;
+            var scenes = ins.scenes;
+            var isBind = stage.attr("data-sencestransition");
 
-            this.scenes.on(startEvent, "", this, function(e){
-                var data = e.data;
-                var target = e.currentTarget;
-                var pointer = data.getPointerPosition(e);
+            if("1" != isBind){
+                scenes.on(startEvent, '', ins, function(e){
+                    var data = e.data;
+                    var pointer = (("changedTouches" in e) ? e.changedTouches[0] : e);
+                    var x = data.startX = pointer.pageX;
+                    var y = data.startY = pointer.pageY;
 
-                if(data.locked){
-                    return 0;
-                }
-                
-                if(!data.enabled || (data.initiated && data.initiated !== 1)){
-                    return 0;
-                }
+                    if(data.locked || !data.enabled || data.touched){
+                        return 1;
+                    }
 
-                data.drawing = true;
-                data.lockedDirection = 0;
-                data.moveIndex = undefined;
-                data.stayIndex = undefined;
-                data.moved = false;
-                data.initiated = 1;
-                data.flipped = false;
-                data.startX = pointer.x;
-                data.startY = pointer.y;     
-            })
-            .on(endEvent, "", this, function(e){
-                var data = e.data;
-                var target = e.currentTarget;
-                var pointer = data.getPointerPosition(e);
+                    data.moved = false;
+                    data.moveDirection = 0;
+                    data.enterScene = undefined;
+                    data.exitScene = undefined;
+                    data.touched = true;
+                    data.animate = false;
 
-                if(data.locked){
-                    return 0;
-                }
-                
-                if(!data.enabled || 1 != data.initiated){
-                    return 0;
-                }
+                }).on(moveEvent, '', ins, function(e){
+                    var data = e.data;
+                    var pointer = (("changedTouches" in e) ? e.changedTouches[0] : e);
+                    var x = data.endX = pointer.pageX;
+                    var y = data.endY = pointer.pageY;
 
-                data.initiated = 0;
+                    var shiftX = x - data.startX;
+                    var shiftY = y - data.startY;
+                    var distance = Direction.HORZIONTAL == data.direction ? shiftX : shiftY;
+                    var shift = Math.abs(distance);
+                    var ratio = Direction.HORZIONTAL == data.direction ? 0.25 : 0.2;
+                    var args = [e, x, y, shiftX, shiftY, distance, data.currentIndex];
 
-                if(!data.moved){
-                    return 0;
-                }
+                    data.moveDirection = distance / shift; //1: prev, -1: next
 
-                data.enabled = false;
+                    if(data.locked || !data.enabled || !data.touched){
+                        return 1;
+                    }
 
-                data.effect("end", [e, pointer.x, pointer.y, target]);
+                    if(shift < 10){
+                        return 1;
+                    }
 
-                $(data.scenes[data.moveIndex]).one("webkitTransitionEnd", "", data, data.complete);
-            })
-            .on(drawingEvent, "", this, function(e){
-                var data = e.data;
-                var target = e.currentTarget;
-                var pointer = data.getPointerPosition(e);
-                var args = [e, pointer.x, pointer.y, target];
+                    data.moved = true;
 
-                if(data.locked){
-                    return 0;
-                }
+                    if(data.moveDirection != data.lockedDirection || undefined === data.enterScene){
+                        data.enterScene = data.moveDirection > 0 ? data.nextScene : data.prevScene;
+                        data.lockedDirection = data.moveDirection;
 
-                if(!data.enabled || 1 !== data.initiated){
-                    return 0;
-                }
+                        data.run("start", args);
+                    }
 
-                var distance = (Direction.HORZIONTAL == data.direction ? -(pointer.x - data.startX) : (pointer.y - data.startY));
-                var absDistance = Math.abs(distance);
-                
-                data.moveDirection = -distance / absDistance; //1: prev, -1: next
+                    if(shift < data.offset * ratio){
+                        data.run("move", args);
+                    }else{
+                        data.animate = true;
+                        data.run("animate", args);
+                    }
 
-                if(absDistance < 10){
-                    return 0;
-                }
+                }).on(endEvent, '', ins, function(e){
+                    var data = e.data;
+                    var pointer = (("changedTouches" in e) ? e.changedTouches[0] : e);
+                    var x = data.endX = pointer.pageX;
+                    var y = data.endY = pointer.pageY;
 
-                data.moved = true;
+                    var shiftX = x - data.startX;
+                    var shiftY = y - data.startY;
+                    var distance = Direction.HORZIONTAL == data.direction ? shiftX : shiftY;
+                    var args = [e, x, y, shiftX, shiftY, distance, data.currentIndex];
 
-                if(data.moveDirection != data.lockedDirection || data.moveIndex === undefined){
-                    data.moveIndex = data.moveDirection > 0 ? data.prevIndex : data.nextIndex;
-                    data.lockedDirection = data.moveDirection;
+                    data.exec("shift", args);
 
-                    data.effect("start", args);
-                }
+                    if(data.locked || !data.enabled || !data.touched){
+                        return 1;
+                    }
 
-                if(absDistance < data.offset * 0.1){
-                    data.effect("move", args.concat(distance));
-                }else{
-                    data.flipped = true;
-                    data.effect("animate", args.concat(distance));
-                }
-            });
+                    data.touched = false;
+
+                    if(!data.moved){
+                        return 1;
+                    }
+
+                    data.enabled = false;
+                    data.run("end", args);
+
+                });
+
+                stage.attr("data-sencestransition", "1");
+            }
         },
+        //---------------------------------------
         "rotate" : {
-            init : function(__super__){
+            currentZIndex : 3,
+            nextZIndex : 4,
+            prevZIndex : 2,
+            queueZIndex : 1,
+
+            init : function(){
+                var __super__ = this["super"];
+
                 Style.css(__super__.scenes, "transformOrigin", "0 100%");
                 Style.css(__super__.scenes, "transitionTimingFunction", "ease-out");
-                Style.css(__super__.parent, "perspective", __super__.perspective);
+                Style.css(__super__.stage, "perspective", __super__.perspective);
             },
-            start : function(__super__, event, x, y, target){
-                var stayScene = null;
+            layout : function(){
+                var __super__ = this["super"];
+                var __effect__ = this["effect"];
+                var scenes = __super__.scenes;
+                var size = __super__.size;
+                var scene = null;
+                var currentIndex = __super__.currentIndex;
+                var nextIndex = __super__.nextIndex;
+                var prevIndex = __super__.prevIndex;
+
+                for(var i = 0; i < size; i++){
+                    scene = $(scenes[i]);
+                    
+                    if(i === currentIndex){ //当前显示
+                        scene.css("z-index", __effect__.currentZIndex);
+                        scene.css("visibility", "visible");
+
+                        Style.css(scene, "transform", "translate(0%,0%) " + translateZ);
+                    }else if(i === nextIndex && nextIndex !== currentIndex){ //下一个
+                        scene.css("z-index", (Direction.HORZIONTAL == __super__.direction ? __effect__.prevZIndex : __effect__.nextZIndex));
+                        scene.css("visibility", "visible");
+
+                        Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == __super__.direction ? "100%,0%" : "0%,100%") + ") " + translateZ);
+                    }else if(i === prevIndex && prevIndex !== currentIndex){ //上一个
+                        scene.css("z-index", (Direction.HORZIONTAL == __super__.direction ? __effect__.nextZIndex : __effect__.prevZIndex));
+                        scene.css("visibility", "visible");
+
+                        Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == __super__.direction ? "0%,100%" : "100%,0%") + ") " + translateZ);
+                    }else{
+                        scene.css("z-index", __effect__.queueZIndex);
+                        scene.css("visibility", "hidden");
+
+                        Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == __super__.direction ? "100%,100%" : "100%,100%") + ") " + translateZ);
+                    }
+                }
+            },
+            start : function(event, x, y, shiftX, shiftY, distance, index){
+                var __super__ = this["super"];
+                var exitScene = null;
+                var enterScene = null;
 
                 if(__super__.moveDirection > 0){ // prev
-                    __super__.moveIndex = __super__.nextIndex;
-                    __super__.stayIndex = __super__.currentIndex;
-
-                    stayScene = $(__super__.scenes[__super__.stayIndex]);
-
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        //Style.css(stayScene, "transform", "rotateY(0deg) translate(0,0) " + translateZ);
-                    }else{
-                        Style.css(stayScene, "transform", "rotateX(" + __super__.deg + "deg) translate(0,0) " + translateZ);
-                    }
-                }else{ //next
-                    __super__.moveIndex = __super__.currentIndex;
-                    __super__.stayIndex = __super__.prevIndex;
-
-                    stayScene = $(__super__.scenes[__super__.stayIndex]);
-
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(stayScene, "transform", "rotateY(" + __super__.deg + "deg) translate(0,0) " + translateZ);
-                    }else{
-                        Style.css(stayScene, "transform", "rotateX(0deg) translate(100%,0) " + translateZ);
-                    }
-                }
-
-                __super__.exec("start", [event, x, y, target, __super__.currentIndex]); 
-            },
-            end : function(__super__, event, x, y, target){ 
-                var stayScene = $(__super__.scenes[__super__.stayIndex]);
-                var moveScene = $(__super__.scenes[__super__.moveIndex]);
-
-                Style.css(moveScene, "transitionDuration", __super__.duration + "s");
-                Style.css(stayScene, "transitionDuration", __super__.duration + "s");
-
-                if(__super__.moveDirection > 0){ //prev
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "rotateY(-" + __super__.deg + "deg) translate(-100%,0) " + translateZ);
-                        Style.css(stayScene, "transform", "rotateY(0deg) " + translateZ);
-                    }else{
-                        Style.css(moveScene, "transform", "rotateX(0deg) translate(0,100%) " + translateZ);
-                        Style.css(stayScene, "transform", "rotateX(0deg) " + translateZ);
-                    }
+                    __super__.enterScene = __super__.prevScene;
+                    __super__.exitScene = __super__.currentScene;
                 }else{ // next
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "rotateY(0deg) translate(0,0) " + translateZ);
-                        Style.css(stayScene, "transform", "rotateY(" + __super__.deg + "deg) " + translateZ);
-                    }else{
-                        Style.css(moveScene, "transform", "rotateX(0deg) translate(0,0) " + translateZ);
-                        Style.css(stayScene, "transform", "rotateX(" + __super__.deg + "deg) " + translateZ);
-                    }
+                    __super__.enterScene = __super__.currentScene;
+                    __super__.exitScene = __super__.nextScene;
                 }
 
-                __super__.exec("end", [event, x, y, target, __super__.currentIndex]);
-            },
-            move : function(__super__, event, x, y, target, distance){
-                var stayDeg, moveDeg;
-                var stayScene = $(__super__.scenes[__super__.stayIndex]);
-                var moveScene = $(__super__.scenes[__super__.moveIndex]);
+                exitScene = __super__.exitScene;
+                enterScene = __super__.enterScene;
 
                 if(Direction.HORZIONTAL == __super__.direction){
                     if(__super__.moveDirection > 0){
-                        stayDeg = -__super__.deg / __super__.offset * Math.abs(distance);
-                        moveDeg = Math.min(-__super__.deg + __super__.deg / (__super__.offset / 1.2) * Math.abs(distance), 0);
-                        distance = -100 - 100 / __super__.offset * distance;
+                        Style.css(enterScene, "transform", "rotateY(" + __super__.deg + "deg) translate(0%,0%) " + translateZ);
                     }else{
-                        stayDeg = Math.min(-__super__.deg + __super__.deg / (__super__.offset / 1.2) * Math.abs(distance), 0);
-                        moveDeg = -__super__.deg / __super__.offset * Math.abs(distance);
-                        distance = -100 / __super__.offset * distance;
+                        //
                     }
-
-                    Style.css(moveScene, "transform", "rotateY(" + moveDeg + "deg) translate(" + distance + "%,0) " + translateZ);
-                    Style.css(stayScene, "transform", "rotateY(" + -stayDeg + "deg) " + translateZ);
                 }else{
                     if(__super__.moveDirection > 0){
-                        stayDeg = __super__.deg / __super__.offset * Math.abs(distance);
-                        moveDeg = Math.min(-__super__.deg + __super__.deg / (__super__.offset / 1.2) * Math.abs(distance), 0);
-                        distance = 100 + 100 / __super__.offset * distance;
+                        Style.css(enterScene, "transform", "rotateX(" + __super__.deg + "deg) translate(0%,0%) " + translateZ);
                     }else{
-                        stayDeg = __super__.deg - __super__.deg / __super__.offset * Math.abs(distance);
-                        moveDeg = Math.min(-__super__.deg / (__super__.offset / 1.2) * Math.abs(distance), 0);
+                        Style.css(enterScene, "transform", "rotateX(0deg) translate(100%,0%) " + translateZ);
+                    }
+                }
+
+                __super__.exec("start", [event, x, y, shiftX, shiftY, distance, index]);
+            },
+            end : function(event, x, y, shiftX, shiftY, distance, index){ 
+                var __super__ = this["super"];
+                var enterScene = __super__.enterScene;
+                var exitScene = __super__.exitScene;
+
+                Style.css(enterScene, "transitionDuration", __super__.duration + "s");
+                Style.css(exitScene, "transitionDuration", __super__.duration + "s");
+
+                exitScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
+
+                if(Direction.HORZIONTAL == __super__.direction){
+                    if(__super__.moveDirection > 0){ //prev
+                        Style.css(exitScene, "transform", "rotateY(" + __super__.deg + "deg) translate(0%,0%) " + translateZ);
+                        Style.css(enterScene, "transform", "rotateY(0deg) " + translateZ);
+                    }else{ //next
+                        Style.css(exitScene, "transform", "rotateY(0deg) " + translateZ);
+                        Style.css(enterScene, "transform", "rotateY(" + -__super__.deg + "deg) translate(-100%,0%) " + translateZ);
+                    }
+                }else{
+                    if(__super__.moveDirection > 0){ //prev
+                        Style.css(exitScene, "transform", "rotateX(-" + __super__.deg + "deg) translate(0%,100%) " + translateZ);
+                        Style.css(enterScene, "transform", "rotateX(0deg) " + translateZ);
+                    }else{ //next
+                        Style.css(exitScene, "transform", "rotateX(0deg) translate(0%,0%) " + translateZ);
+                        Style.css(enterScene, "transform", "rotateX(" + __super__.deg + "deg) " + translateZ);
+                    }
+                }
+
+                __super__.exec("end", [event, x, y, shiftX, shiftY, distance, index]);
+            },
+            move : function(event, x, y, shiftX, shiftY, distance, index){
+                var __super__ = this["super"];
+                var enterScene = __super__.enterScene;
+                var exitScene = __super__.exitScene;
+                var enterDeg = 0;
+                var exitDeg = 0;
+
+                if(Direction.HORZIONTAL == __super__.direction){
+                    if(__super__.moveDirection > 0){ // prev
+                        enterDeg = __super__.deg / __super__.offset * Math.abs(distance);
+                        exitDeg = Math.max(__super__.deg - __super__.deg / (__super__.offset / 1.2) * Math.abs(distance), 0);
+                        distance = -100 + 100 / __super__.offset * distance;
+                    }else{ //next
+                        enterDeg = __super__.deg - __super__.deg / __super__.offset * Math.abs(distance);
+                        exitDeg = Math.max(__super__.deg - __super__.deg / (__super__.offset / 1.2) * Math.abs(distance), 0);
                         distance = 100 / __super__.offset * distance;
                     }
 
-                    Style.css(moveScene, "transform", "rotateX(" + moveDeg + "deg) translate(0," + distance + "%) " + translateZ);
-                    Style.css(stayScene, "transform", "rotateX(" + stayDeg + "deg) " + translateZ);
+                    Style.css(exitScene, "transform", "rotateY(" + exitDeg + "deg) " + translateZ);
+                    Style.css(enterScene, "transform", "rotateY(" + -enterDeg + "deg) translate(" + distance + "%,0%) " + translateZ);
+                }else{
+                    if(__super__.moveDirection > 0){ //prev
+                        enterDeg = __super__.deg - __super__.deg / __super__.offset * Math.abs(distance);
+                        exitDeg = Math.min(-__super__.deg / (__super__.offset / 1.2) * Math.abs(distance), 0);
+                        distance = 100 / __super__.offset * distance;
+                    }else{ //next
+                        enterDeg = __super__.deg / __super__.offset * Math.abs(distance);
+                        exitDeg = Math.min(-__super__.deg + __super__.deg / (__super__.offset / 1.2) * Math.abs(distance), 0);
+                        distance = 100 + 100 / __super__.offset * distance;
+                    }
+
+                    Style.css(exitScene, "transform", "rotateX(" + exitDeg + "deg) translate(0%," + distance + "%) " + translateZ);
+                    Style.css(enterScene, "transform", "rotateX(" + enterDeg + "deg) " + translateZ);
                 }
 
-                __super__.exec("drawing", [event, x, y, target, __super__.currentIndex]);
+                __super__.exec("move", [event, x, y, shiftX, shiftY, distance, index]);
             },
-            animate : function(__super__, event, x, y, target, distance) {
-                var stayScene = $(__super__.scenes[__super__.stayIndex]);
-                var moveScene = $(__super__.scenes[__super__.moveIndex]);
+            animate : function(event, x, y, shiftX, shiftY, distance, index) {
+                var __super__ = this["super"];
+                var enterScene = __super__.enterScene;
+                var exitScene = __super__.exitScene;
 
-                __super__.initiated = 0;
+                __super__.touched = false;
                 __super__.enabled = false;
 
-                Style.css(moveScene, "transitionDuration", __super__.duration + "s");
-                Style.css(stayScene, "transitionDuration", __super__.duration + "s");
+                Style.css(enterScene, "transitionDuration", __super__.duration + "s");
+                Style.css(exitScene, "transitionDuration", __super__.duration + "s");
 
-                if(__super__.moveDirection > 0){ //prev
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "rotateY(0deg) translate(0,0) " + translateZ);
-                        Style.css(stayScene, "transform", "rotateY(" + __super__.deg + "deg) " + translateZ);
-                    }else{
-                        Style.css(moveScene, "transform", "rotateX(0deg) translate(0,0) " + translateZ);
-                        Style.css(stayScene, "transform", "rotateX(" + __super__.deg + "deg) " + translateZ);
+                exitScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
+
+                if(Direction.HORZIONTAL == __super__.direction){
+                    if(__super__.moveDirection > 0){ //prev
+                        Style.css(exitScene, "transform", "rotateY(" + __super__.deg + "deg) translate(0%,0%) " + translateZ);
+                        Style.css(enterScene, "transform", "rotateY(0deg) " + translateZ);
+                    }else{ //next
+                        Style.css(exitScene, "transform", "rotateY(0deg) " + translateZ);
+                        Style.css(enterScene, "transform", "rotateY(" + -__super__.deg + "deg) translate(-100%,0%) " + translateZ);
                     }
-                }else{ // next
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "rotateY(-" + __super__.deg + "deg) translate(-100%,0) " + translateZ);
-                        Style.css(stayScene, "transform", "rotateY(0deg) " + translateZ);
-                    }else{
-                        Style.css(moveScene, "transform", "rotateX(-" + __super__.deg + "deg) translate(0,100%) " + translateZ);
-                        Style.css(stayScene, "transform", "rotateX(0deg) " + translateZ);
+                }else{
+                    if(__super__.moveDirection > 0){ //prev
+                        Style.css(exitScene, "transform", "rotateX(-" + __super__.deg + "deg) translate(0%,100%) " + translateZ);
+                        Style.css(enterScene, "transform", "rotateX(0deg) " + translateZ);
+                    }else{ //next
+                        Style.css(exitScene, "transform", "rotateX(0deg) translate(0%,0%) " + translateZ);
+                        Style.css(enterScene, "transform", "rotateX(" + __super__.deg + "deg) " + translateZ);
                     }
                 }
 
-                moveScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
+                __super__.exec("end", [event, x, y, shiftX, shiftY, distance, index]);
             }
         },
         //---------------------------------------
         "screen" : {
-            init : function(__super__){
+            currentZIndex : 3,
+            nextZIndex : 4,
+            prevZIndex : 2,
+            queueZIndex : 1,
+
+            init : function(){
+                var __super__ = this["super"];
+
                 Style.css(__super__.scenes, "transformOrigin", "50% 50%");
                 Style.css(__super__.scenes, "transitionTimingFunction", "ease-out");
             },
-            start : function(__super__, event, x, y, target){
-                var stayScene = null;
+            layout : function(){
+                var __super__ = this["super"];
+                var __effect__ = this["effect"];
+                var scenes = __super__.scenes;
+                var size = __super__.size;
+                var scene = null;
+                var currentIndex = __super__.currentIndex;
+                var nextIndex = __super__.nextIndex;
+                var prevIndex = __super__.prevIndex;
 
-                if(__super__.moveDirection > 0){ // prev
-                    __super__.moveIndex = __super__.nextIndex;
-                    __super__.stayIndex = __super__.currentIndex;
+                for(var i = 0; i < size; i++){
+                    scene = $(scenes[i]);
+                    
+                    if(i === currentIndex){ //当前显示
+                        scene.css("z-index", __effect__.currentZIndex);
+                        scene.css("visibility", "visible");
 
-                    stayScene = $(__super__.scenes[__super__.stayIndex]);
+                        Style.css(scene, "transform", "translate(0%,0%) " + translateZ);
+                    }else if(i === nextIndex && nextIndex !== currentIndex){ //下一个
+                        scene.css("z-index", (Direction.HORZIONTAL == __super__.direction ? __effect__.prevZIndex : __effect__.nextZIndex));
+                        scene.css("visibility", "visible");
 
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        //Style.css(stayScene, "transform", "rotateY(0deg) translate(0,0) " + translateZ);
+                        Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == __super__.direction ? "100%,0%" : "0%,100%") + ") " + translateZ);
+                    }else if(i === prevIndex && prevIndex !== currentIndex){ //上一个
+                        scene.css("z-index", (Direction.HORZIONTAL == __super__.direction ? __effect__.nextZIndex : __effect__.prevZIndex));
+                        scene.css("visibility", "visible");
+
+                        Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == __super__.direction ? "-100%,0%" : "0%,-100%") + ") " + translateZ);
                     }else{
-                        Style.css(stayScene, "transform", "translate(0,0) " + translateZ);
-                    }
-                }else{ //next
-                    __super__.moveIndex = __super__.currentIndex;
-                    __super__.stayIndex = __super__.prevIndex;
+                        scene.css("z-index", __effect__.queueZIndex);
+                        scene.css("visibility", "hidden");
 
-                    stayScene = $(__super__.scenes[__super__.stayIndex]);
-
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(stayScene, "transform", "translate(0,0) " + translateZ);
-                    }else{
-                        Style.css(stayScene, "transform", "translate(100%,0) " + translateZ);
-                    }
-                }
-
-                __super__.exec("start", [event, x, y, target, __super__.currentIndex]); 
-            },
-            end : function(__super__, event, x, y, target){ 
-                var stayScene = $(__super__.scenes[__super__.stayIndex]);
-                var moveScene = $(__super__.scenes[__super__.moveIndex]);
-
-                Style.css(moveScene, "transitionDuration", __super__.duration + "s");
-                Style.css(stayScene, "transitionDuration", __super__.duration + "s");
-
-                if(__super__.moveDirection > 0){ //prev
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "translate(-100%,0) " + translateZ);
-                        Style.css(stayScene, "transform", translateZ);
-                    }else{
-                        Style.css(moveScene, "transform", "translate(0,100%) " + translateZ);
-                        Style.css(stayScene, "transform", translateZ);
-                    }
-                }else{ // next
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "translate(0,0) " + translateZ);
-                        Style.css(stayScene, "transform", translateZ);
-                    }else{
-                        Style.css(moveScene, "transform", "translate(0,0) " + translateZ);
-                        Style.css(stayScene, "transform", translateZ);
+                        Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == __super__.direction ? "100%,100%" : "100%,100%") + ") " + translateZ);
                     }
                 }
-
-                __super__.exec("end", [event, x, y, target, __super__.currentIndex]);
             },
-            move : function(__super__, event, x, y, target, distance){
-                var stayScene = $(__super__.scenes[__super__.stayIndex]);
-                var moveScene = $(__super__.scenes[__super__.moveIndex]);
-
-                if(Direction.HORZIONTAL == __super__.direction){
-                    if(__super__.moveDirection > 0){
-                        distance = -100 - 100 / __super__.offset * distance;
-                    }else{
-                        distance = -100 / __super__.offset * distance;
-                    }
-
-                    Style.css(moveScene, "transform", "translate(" + distance + "%,0) " + translateZ);
-                    Style.css(stayScene, "transform", "translate(" + (distance - 100) + "%,0) " + translateZ);
-                }else{
-                    if(__super__.moveDirection > 0){
-                        distance = 100 + 100 / __super__.offset * distance;
-                    }else{
-                        distance = 100 / __super__.offset * distance;
-                    }
-
-                    Style.css(moveScene, "transform", "translate(0," + distance + "%) " + translateZ);
-                    Style.css(stayScene, "transform", "translate(0," + (distance - 100) + "%) " + translateZ);
-                }
-
-                __super__.exec("drawing", [event, x, y, target, __super__.currentIndex]);
-            },
-            animate : function(__super__, event, x, y, target, distance) {
-                var stayScene = $(__super__.scenes[__super__.stayIndex]);
-                var moveScene = $(__super__.scenes[__super__.moveIndex]);
-
-                __super__.initiated = 0;
-                __super__.enabled = false;
-
-                Style.css(moveScene, "transitionDuration", __super__.duration + "s");
-                Style.css(stayScene, "transitionDuration", __super__.duration + "s");
-
-                if(__super__.moveDirection > 0){ //prev
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "translate(0,0) " + translateZ);
-                        Style.css(stayScene, "transform", "translate(-100%,0) " + translateZ);
-                    }else{
-                        Style.css(moveScene, "transform", "translate(0,0) " + translateZ);
-                        Style.css(stayScene, "transform", "translate(0,-100%) " + translateZ);
-                    }
-                }else{ // next
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "translate(-100%,0) " + translateZ);
-                        Style.css(stayScene, "transform", "translate(0,0) " + translateZ);
-                    }else{
-                        Style.css(moveScene, "transform", "translate(0,100%) " + translateZ);
-                        Style.css(stayScene, "transform", "translate(0,0) " + translateZ);
-                    }
-                }
-
-                moveScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
-            }
-        },
-        //---------------------------------------
-        "zoom" : {
-            init : function(__super__){
-                Style.css(__super__.scenes, "transformOrigin", "50% 50%");
-                Style.css(__super__.scenes, "transitionTimingFunction", "ease-out");
-            },
-            start : function(__super__, event, x, y, target){
-                var stayScene = null;
-                var moveScene = null;
-
-                if(__super__.moveDirection > 0){ // prev
-                    __super__.moveIndex = __super__.nextIndex;
-                    __super__.stayIndex = __super__.currentIndex;
-
-                    moveScene = $(__super__.scenes[__super__.moveIndex]);
-                    Style.css(moveScene, "transform", "translate(0,0) scale(2) " + translateZ);
-                    Style.css(moveScene, "opacity", 0);
-                }else{ //next
-                    __super__.moveIndex = __super__.currentIndex;
-                    __super__.stayIndex = __super__.prevIndex;
-
-                    stayScene = $(__super__.scenes[__super__.stayIndex]);
-
-                    Style.css(stayScene, "transform", "translate(0,0) scale(.5) " + translateZ);
-                    Style.css(stayScene, "opacity", 0);
-                }
-
-                __super__.exec("start", [event, x, y, target, __super__.currentIndex]); 
-            },
-            end : function(__super__, event, x, y, target){ 
-                var stayScene = $(__super__.scenes[__super__.stayIndex]);
-                var moveScene = $(__super__.scenes[__super__.moveIndex]);
-
-                Style.css(moveScene, "transitionDuration", __super__.duration + "s");
-                Style.css(stayScene, "transitionDuration", __super__.duration + "s");
-
-                if(__super__.moveDirection > 0){ //prev
-                    Style.css(moveScene, "transform", "scale(2) " + translateZ);
-                    Style.css(moveScene, "opacity", 0);
-                    Style.css(stayScene, "transform", "scale(1) " + translateZ);
-                    Style.css(stayScene, "opacity", 1);
-                }else{ // next
-                    Style.css(moveScene, "transform", "scale(1) " + translateZ);
-                    Style.css(moveScene, "opacity", 1);
-                    Style.css(stayScene, "transform", "scale(.5) " + translateZ);
-                }
-
-                __super__.exec("end", [event, x, y, target, __super__.currentIndex]);
-            },
-            move : function(__super__, event, x, y, target, distance){
-                var stayScene = $(__super__.scenes[__super__.stayIndex]);
-                var moveScene = $(__super__.scenes[__super__.moveIndex]);
-                var opacity = 0;
-                var stayScale = 0;
-                var moveScale = 0;
-
-                opacity = Math.min(1 / __super__.offset * Math.abs(distance) * 1.5, 1);
+            start : function(event, x, y, shiftX, shiftY, distance, index){
+                var __super__ = this["super"];
 
                 if(__super__.moveDirection > 0){
-                    stayScale = 1 - .5 / __super__.offset * Math.abs(distance);
-                    moveScale = 2 - 2 / __super__.offset * Math.abs(distance);
-
-                    Style.css(moveScene, "transform", "scale(" + moveScale + ") " + translateZ);
-                    Style.css(moveScene, "opacity", opacity);
-                    Style.css(stayScene, "transform", "scale(" + stayScale + ") " + translateZ);
-                    Style.css(stayScene, "opacity", 1 - opacity);
+                    __super__.enterScene = __super__.prevScene;
+                    __super__.exitScene = __super__.currentScene;
                 }else{
-                    stayScale = .5 + .5 / __super__.offset * Math.abs(distance);
-                    moveScale = 1 + 1 / __super__.offset * Math.abs(distance);
+                    __super__.enterScene = __super__.nextScene;
+                    __super__.exitScene = __super__.currentScene;
+                }
+                    
+                __super__.exec("start", [event, x, y, shiftX, shiftY, distance, index]);
+            },
+            end : function(event, x, y, shiftX, shiftY, distance, index){ 
+                var __super__ = this["super"];
+                var enterScene = __super__.enterScene;
+                var exitScene = __super__.exitScene;
 
-                    Style.css(moveScene, "transform", "scale(" + moveScale + ") " + translateZ);
-                    Style.css(moveScene, "opacity", 1 - opacity);
-                    Style.css(stayScene, "transform", "scale(" + stayScale + ") " + translateZ);
-                    Style.css(stayScene, "opacity", opacity);
+                Style.css(enterScene, "transitionDuration", __super__.duration + "s");
+                Style.css(exitScene, "transitionDuration", __super__.duration + "s");
+
+                exitScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
+
+                if(Direction.HORZIONTAL == __super__.direction){
+                    if(__super__.moveDirection > 0){ //prev
+                        Style.css(exitScene, "transform", "translate(100%,0%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
+                    }else{ //next
+                        Style.css(exitScene, "transform", "translate(-100%,0%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
+                    }
+                }else{
+                    if(__super__.moveDirection > 0){ //prev
+                        Style.css(exitScene, "transform", "translate(0%,100%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
+                    }else{ //next
+                        Style.css(exitScene, "transform", "translate(0%,-100%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
+                    }
                 }
 
-                __super__.exec("drawing", [event, x, y, target, __super__.currentIndex]);
+                __super__.exec("end", [event, x, y, shiftX, shiftY, distance, index]);
             },
-            animate : function(__super__, event, x, y, target, distance) {
-                var stayScene = $(__super__.scenes[__super__.stayIndex]);
-                var moveScene = $(__super__.scenes[__super__.moveIndex]);
+            move : function(event, x, y, shiftX, shiftY, distance, index){
+                var __super__ = this["super"];
+                var enterScene = __super__.enterScene;
+                var exitScene = __super__.exitScene;
+                var enterDistance = 0;
+                var exitDistance = 0;
 
-                __super__.initiated = 0;
+                if(__super__.moveDirection > 0){ // prev
+                    exitDistance = 100 / __super__.offset * distance;
+                    enterDistance = exitDistance - 100;
+                }else{ //next
+                    exitDistance = 100 / __super__.offset * distance;
+                    enterDistance = exitDistance + 100;
+                }
+
+                if(Direction.HORZIONTAL == __super__.direction){
+                    Style.css(exitScene, "transform", "translate(" + exitDistance + "%, 0%)" + translateZ);
+                    Style.css(enterScene, "transform", "translate(" + enterDistance + "%,0%) " + translateZ);
+                }else{
+                    Style.css(exitScene, "transform", "translate(0%," + exitDistance + "%)" + translateZ);
+                    Style.css(enterScene, "transform", "translate(0%," + enterDistance + "%) " + translateZ);
+                }
+
+                __super__.exec("move", [event, x, y, shiftX, shiftY, distance, index]);
+            },
+            animate : function(event, x, y, shiftX, shiftY, distance, index) {
+                var __super__ = this["super"];
+                var enterScene = __super__.enterScene;
+                var exitScene = __super__.exitScene;
+
+                __super__.touched = false;
                 __super__.enabled = false;
 
-                Style.css(moveScene, "transitionDuration", __super__.duration + "s");
-                Style.css(stayScene, "transitionDuration", __super__.duration + "s");
+                Style.css(enterScene, "transitionDuration", __super__.duration + "s");
+                Style.css(exitScene, "transitionDuration", __super__.duration + "s");
 
-                if(__super__.moveDirection > 0){ //prev
-                    Style.css(moveScene, "transform", "scale(1) " + translateZ);
-                    Style.css(moveScene, "opacity", 1);
-                    Style.css(stayScene, "transform", "scale(.5) " + translateZ);
-                }else{ // next
-                    Style.css(moveScene, "transform", "scale(2) " + translateZ);
-                    Style.css(moveScene, "opacity", 0);
-                    Style.css(stayScene, "transform", "scale(1) " + translateZ);
-                    Style.css(stayScene, "opacity", 1);
+                exitScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
+
+                if(Direction.HORZIONTAL == __super__.direction){
+                    if(__super__.moveDirection > 0){ //prev
+                        Style.css(exitScene, "transform", "translate(100%,0%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
+                    }else{ //next
+                        Style.css(exitScene, "transform", "translate(-100%,0%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
+                    }
+                }else{
+                    if(__super__.moveDirection > 0){ //prev
+                        Style.css(exitScene, "transform", "translate(0%,100%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
+                    }else{ //next
+                        Style.css(exitScene, "transform", "translate(0%,-100%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
+                    }
                 }
 
-                moveScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
+                __super__.exec("end", [event, x, y, shiftX, shiftY, distance, index]);
             }
         },
         //---------------------------------------
         "scale" : {
-            init : function(__super__){
+            currentZIndex : 2,
+            nextZIndex : 3,
+            prevZIndex : 3,
+            queueZIndex : 1,
+
+            init : function(){
+                var __super__ = this["super"];
+
                 Style.css(__super__.scenes, "transformOrigin", "50% 50%");
                 Style.css(__super__.scenes, "transitionTimingFunction", "ease-out");
             },
-            start : function(__super__, event, x, y, target){
-                var stayScene = null;
-                var moveScene = null;
+            layout : function(){
+                var __super__ = this["super"];
+                var __effect__ = this["effect"];
+                var scenes = __super__.scenes;
+                var size = __super__.size;
+                var scene = null;
+                var currentIndex = __super__.currentIndex;
+                var nextIndex = __super__.nextIndex;
+                var prevIndex = __super__.prevIndex;
 
-                if(__super__.moveDirection > 0){ // prev
-                    __super__.moveIndex = __super__.nextIndex;
-                    __super__.stayIndex = __super__.currentIndex;
+                for(var i = 0; i < size; i++){
+                    scene = $(scenes[i]);
+                    
+                    if(i === currentIndex){ //当前显示
+                        scene.css("z-index", __effect__.currentZIndex);
+                        scene.css("visibility", "visible");
 
-                    stayScene = $(__super__.scenes[__super__.stayIndex]);
-                    moveScene = $(__super__.scenes[__super__.moveIndex]);
+                        Style.css(scene, "transform", "translate(0%,0%) " + translateZ);
+                    }else if(i === nextIndex && nextIndex !== currentIndex){ //下一个
+                        scene.css("z-index", __effect__.nextZIndex);
+                        scene.css("visibility", "visible");
 
-                    Style.css(moveScene, "transform", "translate(0,0) scale(2) " + translateZ);
-                    //Style.css(moveScene, "opacity", 0);
+                        Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == __super__.direction ? "100%,0%" : "0%,100%") + ") " + translateZ);
+                    }else if(i === prevIndex && prevIndex !== currentIndex){ //上一个
+                        scene.css("z-index", __effect__.prevZIndex);
+                        scene.css("visibility", "visible");
 
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        //Style.css(stayScene, "transform", "rotateY(0deg) translate(0,0) " + translateZ);
+                        Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == __super__.direction ? "-100%,0%" : "0%,-100%") + ") " + translateZ);
                     }else{
-                        Style.css(stayScene, "transform", "translate(0,0) " + translateZ);
-                    }
-                }else{ //next
-                    __super__.moveIndex = __super__.currentIndex;
-                    __super__.stayIndex = __super__.prevIndex;
+                        scene.css("z-index", __effect__.queueZIndex);
+                        scene.css("visibility", "hidden");
 
-                    stayScene = $(__super__.scenes[__super__.stayIndex]);
-                    moveScene = $(__super__.scenes[__super__.moveIndex]);
-
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(stayScene, "transform", "translate(0,0) scale(.5) " + translateZ);
-                    }else{
-                        Style.css(stayScene, "transform", "translate(100%,0) scale(.5) " + translateZ);
-                    }
-
-                    //Style.css(stayScene, "opacity", 0);
-                }
-
-                __super__.exec("start", [event, x, y, target, __super__.currentIndex]); 
-            },
-            end : function(__super__, event, x, y, target){ 
-                var stayScene = $(__super__.scenes[__super__.stayIndex]);
-                var moveScene = $(__super__.scenes[__super__.moveIndex]);
-
-                Style.css(moveScene, "transitionDuration", __super__.duration + "s");
-                Style.css(stayScene, "transitionDuration", __super__.duration + "s");
-
-                if(__super__.moveDirection > 0){ //prev
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "translate(-100%,0) scale(2) " + translateZ);
-                        //Style.css(moveScene, "opacity", 0);
-                        Style.css(stayScene, "transform", "scale(1) " + translateZ);
-                        //Style.css(stayScene, "opacity", 1);
-                    }else{
-                        Style.css(moveScene, "transform", "translate(0,100%) scale(1) " + translateZ);
-                        //Style.css(moveScene, "opacity", 0);
-                        Style.css(stayScene, "transform", "scale(1) " + translateZ);
-                        //Style.css(stayScene, "opacity", 1);
-                    }
-                }else{ // next
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "translate(0,0) scale(1) " + translateZ);
-                        //Style.css(moveScene, "opacity", 1);
-                        Style.css(stayScene, "transform", "scale(.5) " + translateZ);
-                    }else{
-                        Style.css(moveScene, "transform", "translate(0,0) scale(1) " + translateZ);
-                        //Style.css(moveScene, "opacity", 1);
-                        Style.css(stayScene, "transform", "scale(.5) " + translateZ);
+                        Style.css(scene, "transform", "translate(" + (Direction.HORZIONTAL == __super__.direction ? "100%,100%" : "100%,100%") + ") " + translateZ);
                     }
                 }
-
-                __super__.exec("end", [event, x, y, target, __super__.currentIndex]);
             },
-            move : function(__super__, event, x, y, target, distance){
-                var stayScene = $(__super__.scenes[__super__.stayIndex]);
-                var moveScene = $(__super__.scenes[__super__.moveIndex]);
-                //var opacity = 0;
-                var stayScale = 0;
-                var moveScale = 0;
-                //var stayOpacity = opacity;
-                //var moveOpacity = opacity;
+            start : function(event, x, y, shiftX, shiftY, distance, index){
+                var __super__ = this["super"];
 
-                //opacity = Math.min(1 / __super__.offset * Math.abs(distance) * 1.5, 1);
+                if(__super__.moveDirection > 0){
+                    __super__.enterScene = __super__.prevScene;
+                    __super__.exitScene = __super__.currentScene;
+                }else{
+                    __super__.enterScene = __super__.nextScene;
+                    __super__.exitScene = __super__.currentScene;
+                }
+                    
+                __super__.exec("start", [event, x, y, shiftX, shiftY, distance, index]);
+            },
+            end : function(event, x, y, shiftX, shiftY, distance, index){ 
+                var __super__ = this["super"];
+                var enterScene = __super__.enterScene;
+                var exitScene = __super__.exitScene;
+
+                Style.css(enterScene, "transitionDuration", __super__.duration + "s");
+                Style.css(exitScene, "transitionDuration", __super__.duration + "s");
+
+                exitScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
 
                 if(Direction.HORZIONTAL == __super__.direction){
-                    if(__super__.moveDirection > 0){
-                        distance = -100 - 100 / __super__.offset * distance;
-
-                        stayScale = 1 - .5 / __super__.offset * Math.abs(distance);
-                        moveScale = 2 - 2 / __super__.offset * Math.abs(distance);
-
-                        //moveOpacity = opacity;
-                        //stayOpacity = 1 - opacity;
-                    }else{
-                        distance = -100 / __super__.offset * distance;
-
-                        stayScale = .5 + .5 / __super__.offset * Math.abs(distance);
-                        moveScale = 1 + 1 / __super__.offset * Math.abs(distance);
-
-                        //moveOpacity = 1 - opacity;
-                        //stayOpacity = opacity;
+                    if(__super__.moveDirection > 0){ //prev
+                        Style.css(exitScene, "transform", "scale(" + __super__.screenScale + ") translate(100%,0%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
+                    }else{ //next
+                        Style.css(exitScene, "transform", "scale(" + __super__.screenScale + ") translate(-100%,0%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
                     }
-
-                    Style.css(moveScene, "transform", "translate(" + distance + "%,0) scale(" + moveScale + ") " + translateZ);
-                    //Style.css(moveScene, "opacity", moveOpacity);
-                    Style.css(stayScene, "transform", "translate(" + (distance - 100) + "%,0) scale(" + stayScale + ") " + translateZ);
-                    //Style.css(stayScene, "opacity", stayOpacity);
                 }else{
-                    if(__super__.moveDirection > 0){
-                        distance = 100 + 100 / __super__.offset * distance;
-
-                        stayScale = 1 - .5 / __super__.offset * Math.abs(distance);
-                        moveScale = 2 - 2 / __super__.offset * Math.abs(distance);
-
-                        //moveOpacity = opacity;
-                        //stayOpacity = 1 - opacity;
-                    }else{
-                        distance = 100 / __super__.offset * distance;
-
-                        stayScale = .5 + .5 / __super__.offset * Math.abs(distance);
-                        moveScale = 1 + 1 / __super__.offset * Math.abs(distance);
-
-                        //moveOpacity = 1 - opacity;
-                        //stayOpacity = opacity;
-                    } 
-
-                    Style.css(moveScene, "transform", "translate(0," + distance + "%) scale(" + moveScale + ") " + translateZ);
-                    //Style.css(moveScene, "opacity", moveOpacity);
-                    Style.css(stayScene, "transform", "translate(0," + (distance - 100) + "%) scale(" + stayScale + ") " + translateZ);
-                    //Style.css(stayScene, "opacity", stayOpacity);
+                    if(__super__.moveDirection > 0){ //prev
+                        Style.css(exitScene, "transform", "scale(" + __super__.screenScale + ") translate(0%,100%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
+                    }else{ //next
+                        Style.css(exitScene, "transform", "scale(" + __super__.screenScale + ") translate(0%,-100%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
+                    }
                 }
 
-                __super__.exec("drawing", [event, x, y, target, __super__.currentIndex]);
+                __super__.exec("end", [event, x, y, shiftX, shiftY, distance, index]);
             },
-            animate : function(__super__, event, x, y, target, distance) {
-                var stayScene = $(__super__.scenes[__super__.stayIndex]);
-                var moveScene = $(__super__.scenes[__super__.moveIndex]);
+            move : function(event, x, y, shiftX, shiftY, distance, index){
+                var __super__ = this["super"];
+                var enterScene = __super__.enterScene;
+                var exitScene = __super__.exitScene;
+                var enterDistance = 0;
+                var exitDistance = 0;
+                var scale = 0;
 
-                __super__.initiated = 0;
+                if(__super__.moveDirection > 0){ // prev
+                    exitDistance = 100 / __super__.offset * distance;
+                    enterDistance = exitDistance - 100;
+                }else{ //next
+                    exitDistance = 100 / __super__.offset * distance;
+                    enterDistance = exitDistance + 100;
+                }
+
+                scale = 1 - __super__.screenScale / __super__.offset * Math.abs(distance);
+
+                if(Direction.HORZIONTAL == __super__.direction){
+                    Style.css(exitScene, "transform", "scale(" + scale + ") translate(" + exitDistance + "%, 0%)" + translateZ);
+                    Style.css(enterScene, "transform", "translate(" + enterDistance + "%,0%) " + translateZ);
+                }else{
+                    Style.css(exitScene, "transform", "scale(" + scale + ") translate(0%," + exitDistance + "%)" + translateZ);
+                    Style.css(enterScene, "transform", "translate(0%," + enterDistance + "%) " + translateZ);
+                }
+
+                __super__.exec("move", [event, x, y, shiftX, shiftY, distance, index]);
+            },
+            animate : function(event, x, y, shiftX, shiftY, distance, index) {
+                var __super__ = this["super"];
+                var enterScene = __super__.enterScene;
+                var exitScene = __super__.exitScene;
+
+                __super__.touched = false;
                 __super__.enabled = false;
 
-                Style.css(moveScene, "transitionDuration", __super__.duration + "s");
-                Style.css(stayScene, "transitionDuration", __super__.duration + "s");
+                Style.css(enterScene, "transitionDuration", __super__.duration + "s");
+                Style.css(exitScene, "transitionDuration", __super__.duration + "s");
 
-                if(__super__.moveDirection > 0){ //prev
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "translate(0,0) scale(1) " + translateZ);
-                        Style.css(stayScene, "transform", "translate(-100%,0) scale(.5) " + translateZ);
-                    }else{
-                        Style.css(moveScene, "transform", "translate(0,0)  scale(1) " + translateZ);
-                        Style.css(stayScene, "transform", "translate(0,-100%)  scale(.5) " + translateZ);
+                exitScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
+
+                if(Direction.HORZIONTAL == __super__.direction){
+                    if(__super__.moveDirection > 0){ //prev
+                        Style.css(exitScene, "transform", "scale(" + __super__.screenScale + ") translate(100%,0%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
+                    }else{ //next
+                        Style.css(exitScene, "transform", "scale(" + __super__.screenScale + ") translate(-100%,0%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
                     }
-                    //Style.css(moveScene, "opacity", 1);
-                }else{ // next
-                    if(Direction.HORZIONTAL == __super__.direction){
-                        Style.css(moveScene, "transform", "translate(-100%,0) scale(2) " + translateZ);
-                        Style.css(stayScene, "transform", "translate(0,0) scale(1) " + translateZ);
-                    }else{
-                        Style.css(moveScene, "transform", "translate(0,100%) scale(2) " + translateZ);
-                        Style.css(stayScene, "transform", "translate(0,0) scale(1) " + translateZ);
+                }else{
+                    if(__super__.moveDirection > 0){ //prev
+                        Style.css(exitScene, "transform", "scale(" + __super__.screenScale + ") translate(0%,100%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
+                    }else{ //next
+                        Style.css(exitScene, "transform", "scale(" + __super__.screenScale + ") translate(0%,-100%) " + translateZ);
+                        Style.css(enterScene, "transform", "translate(0%,0%) " + translateZ);
                     }
                 }
 
-                //Style.css(moveScene, "opacity", 0);
-                //Style.css(stayScene, "opacity", 1);
-
-                moveScene.one("webkitTransitionEnd", "", __super__, __super__.complete);
+                __super__.exec("end", [event, x, y, shiftX, shiftY, distance, index]);
             }
         }//---------------------------------------
-    };
+    }; 
 
     var _pub = {
-        newInstance : function(snap, effect){
-            var st = new _SceneTransitions(snap, effect);
+        newInstance : function(snap, effect, direction){
+            var st = new _SceneTransitions(snap, effect, direction);
 
             return {
+                "stage": st.stage,
+                "scenes": st.scenes,
+                "size": st.size,
                 "set" : function(type, option){
                     st.set(type, option);
 
@@ -925,6 +804,11 @@
 
                     return this;
                 },
+                "setScreenScale" : function(scale){
+                    st.setScreenScale(scale);
+
+                    return this;
+                },
                 "setDuration" : function(duration){
                     st.setDuration(duration);
 
@@ -932,6 +816,16 @@
                 },
                 "setPerspective" : function(perspective){
                     st.setPerspective(perspective);
+
+                    return this;
+                },
+                "cancelBubble" : function(){
+                    st.cancelBubble();
+
+                    return this;
+                },
+                "preventDefault" : function(){
+                    st.preventDefault();
 
                     return this;
                 }

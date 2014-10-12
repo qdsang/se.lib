@@ -10,7 +10,7 @@
  * @date 2014.9
  */
 ;define(function (require, exports, module){
-	var vendors = ["webkit", "Moz", "ms", "O", ""];
+    var vendors = ["webkit", "Moz", "ms", "O", ""];
     var vendorLength = vendors.length;
     var nodeStyle = document.createElement("div").style;
     var funcs = /^((translate|rotate|scale)(X|Y|Z|3d)?|skew(X|Y)|matrix(3d)?|perspective)$/;
@@ -56,7 +56,7 @@
     };
 
     var css = function(el, name, value){
-    	var prefix = getPrefixStyle(name);
+        var prefix = getPrefixStyle(name);
 
         if((undefined === prefix || prefix == name)){
             el.css(name, value);
@@ -67,9 +67,9 @@
 
     module.exports = {
         "hasProperty" : hasProperty,
-    	"getRealStyle": getRealStyle,
-    	"getPrefixStyle": getPrefixStyle,
-    	"cssname": cssname,
-    	"css": css
+        "getRealStyle": getRealStyle,
+        "getPrefixStyle": getPrefixStyle,
+        "cssname": cssname,
+        "css": css
     };
 });

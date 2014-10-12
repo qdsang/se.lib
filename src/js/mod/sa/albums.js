@@ -12,16 +12,9 @@
 ;define(function (require, exports, module){
                     require("mod/zepto/touch");
     var LA        = require("mod/sa/lightanimation");
+    var ST        = require("mod/sa/scenetransitions");
     var Listener  = require("mod/se/listener");
     var Util      = require("mod/se/util");
-    var Style     = require("mod/polyfill/css");
-
-    var touch = ("ontouchstart" in window);
-    var startEvent = touch ? "touchstart" : "mousedown";
-    var moveEvent = touch ? "touchmove" : "mousemove";
-    var endEvent = touch ? "touchend" : "mouseup";
-
-    var translateZ = Style.hasProperty("perspective") ? "translateZ(0)" : "";
 
     var AlbumsCache = {};
 
@@ -50,7 +43,8 @@
                 cache.currentIndex = 0;
                 cache.photos = photos;
                 cache.photoList = photos.find('[data-type="photo"]');
-                cache.resetPhotoList();
+                //cache.resetPhotoList();
+                cache.createSceneTransition();
 
                 photos.removeClass("hide");
 
@@ -84,7 +78,10 @@
 
         this.listener = new Listener({
             onshow : null,
-            onhidden : null
+            onhidden : null,
+            onstart: null,
+            onscrolling: null,
+            onend: null
         });
     };
 
@@ -127,133 +124,51 @@
         clear : function(){
             this.listener.clear();
         },
-        getPointerPosition : function(e){
-            if(e.changedTouches){
-                e = e.changedTouches[e.changedTouches.length - 1];
-            }
+        createSceneTransition : function(){
+            var _ins = this;
 
-            var x = 0;
-            var y = 0;
-            var clientX = e.clientX;
-            var clientY = e.clientY;
-            var body = document.body;
-            var scrollLeft = body.scrollLeft;
-            var scrollTop = body.scrollTop;
-            var stage = $(e.target);
-            var offset = stage.offset();
-                
-            x = (clientX + scrollLeft || e.pageX) - offset.left || 0;
-            y = (clientY + scrollTop || e.pageY) - offset.top || 0;
+            var st = null;
+            var photos = _ins.photos;
+            var list = _ins.photoList;
+            var mode = photos.attr("data-mode");
+            var scroll = photos.attr("data-scroll") || "horizontal";
+            var hidden = Number(photos.attr("data-hidden") || "100");
 
-            return {"x": x, "y": y};
-        },
-        resetPhotoList : function(){
-            var list = this.photoList;
-            var size = list.length;
-            var photo = null;
-            var scroll = this.photos.attr("data-scroll");
-            var currentIndex = this.currentIndex;
-            var lastIndex = this.lastIndex = size - 1;
-            var nextIndex = this.nextIndex = (currentIndex + 1 > lastIndex ? 0 : currentIndex + 1);
-            var prevIndex = this.prevIndex = (currentIndex - 1 < 0 ? lastIndex : currentIndex - 1);
+            st = ST.newInstance(list, mode, scroll);
 
-            for(var i = 0; i < size; i++){
-                photo = $(list[i]);
-                photo.css("visibility", "hidden");
-                photo.css("opacity", 1);
-                if(i === currentIndex){ //当前显示
-                    photo.css("z-index", this.currentZIndex);
-                    photo.css("visibility", "visible");
-                }else if(i === nextIndex){ //下一个
-                    photo.css("z-index", this.nextZIndex);
-                    photo.css("visibility", "visible");
-                }else if(i === prevIndex){ //上一个
-                    photo.css("z-index", this.prevZIndex);
-                    photo.css("visibility", "visible");
-                }
-                Style.css(photo, "transform", "translate(0, 0) " + translateZ);
-            }
-        },
-        bind : function(){
-            var ins = this;
-
-            var photos = ins.albums.find('[data-type="photos"]');
-
-            $.each(photos, function(index, item){
-                var startX = 0;
-                var startY = 0;
-                var endX = 0;
-                var endY = 0;
-                var o = $(item);
-
-                o.on(startEvent, "", ins, function(e){
-                    var data = e.data;
-                    var pointer = data.getPointerPosition(e);
-
-                    startX = pointer.x;
-                    startY = pointer.y;
-
-                }).on(moveEvent, "", ins, function(e){
-                    var data = e.data;
-                    var pointer = data.getPointerPosition(e);
-
-                    endX = pointer.x;
-                    endY = pointer.y;
-
-                }).on(endEvent, "", ins, function(e){
-                    var data = e.data;
-                    var pointer = data.getPointerPosition(e);
-                    var scroll = o.attr("data-scroll");
-                    var hidden = Number(o.attr("data-hidden") || 50);
+            st.set("shift", {
+                callback: function(e, x, y, shiftX, shiftY, distance, scroll, hidden, _st){
+                    var sx = Math.abs(shiftX);
+                    var sy = Math.abs(shiftY);
                     var isHidden = false;
-                    var photo = data.photoList[data.currentIndex];
+                    var stage = _st.stage;
                     var source = null;
                     var c = '!.5s ease-out;opacity:0!.4s ease-out';
-                    var moved = false;
 
-                    endX = pointer.x;
-                    endY = pointer.y;
-
-                    if("h" == scroll){
-                        isHidden = (Math.abs(endY - startY) >= hidden);
-                        source = 'transition::translate:' + ((endX - startX) > 0 ? '100%,0' : '-100%,0') + c;
-                        moved = (Math.abs(endX - startX) > 10);
+                    if(scroll == "horizontal"){
+                        isHidden = (sy >= hidden);
+                        source = 'transition::translate:' + (shiftX > 0 ? '100%,0' : '-100%,0') + c;
                     }else{
-                        isHidden = (Math.abs(endX - startX) >= hidden);
-                        source = 'transition::translate:' + ((endY - startY) > 0 ? '0,100%' : '0,-100%') + c;
-                        moved = (Math.abs(endY - startY) > 10);
+                        isHidden = (sx >= hidden);
+                        source = 'transition::translate:' + (shiftY > 0 ? '0,100%' : '0,-100%') + c;
                     }
 
                     if(isHidden){
-                        o.one("webkitTransitionEnd", function(e){
+                        stage.one("webkitTransitionEnd", "", {"stage": stage, "albums": this}, function(e){
                             e.stopPropagation();
-                            o.addClass("hide");
 
-                            data.exec("hidden", []);
+                            var data = e.data;
+
+                            data.stage.addClass("hide");
+
+                            data.albums.exec("hidden", []);
                         });
-                        o.css("opacity", 0);
-                    }else{
-                        if(!moved){
-                            return 0;
-                        }
-
-                        LA.newInstance(photo, source)
-                          .set("complete", {
-                               callback: function(target){
-                                   ++this.currentIndex;
-
-                                   if(this.currentIndex >= this.photoList.length){
-                                        this.currentIndex = 0;
-                                   }
-
-                                   this.resetPhotoList();
-                               },
-                               context: data
-                          })
-                          .play();
+                        stage.css("opacity", 0);
                     }
-                });
-            });
+                },
+                context: _ins,
+                args: [scroll, hidden, st]
+            })
         },
         create : function(){
             var ins = this;
@@ -269,8 +184,6 @@
             ins.albums.attr("data-relative", ins.relative);
 
             AlbumsCache[ins.id] = ins;
-
-            ins.bind();
 
             Util.setActionHook(ins.albums);
             Util.injectAction(Action);

@@ -14,19 +14,19 @@
     .album{width: 120px; height: 120px; position: relative; float: left;}
     .album .thumbnail{width: 100%; height: 100%; z-index: 1; background: red;}
     .album .photos{width: 100%; height: 100%; position: absolute; left:0; top: 0; z-index: 1;}
-    .album .photo{position: absolute; left:0; top:0; width: 100%; height: 100%; background: blue; z-index: 2}
+    .album .photo{position: absolute; width: 100%; height: 100%; background: blue; z-index: 1}
   </style>
 </head>
 <body>
 <article class="webapp-view" id="view">
   <div class="webapp-modules">
     <section>
-      <div class="albums" id="albums" data-type="albums" data-scroll="h" data-in="transition::translate:0,0!0.4s ease-out" style="background:#ededed;-webkit-transform:translate(0, -100%); transform:translate(0, -100%)">
+      <div class="albums" id="albums" data-type="albums" data-scroll="horizontal" data-in="transition::translate:0,0!0.4s ease-out" style="background:#ededed;-webkit-transform:translate(0, -100%); transform:translate(0, -100%)">
         <div class="album" data-type="album">
           <div class="thumbnail" data-type="thumbnail" data-action="Action://albums/show">
             <div>thumbnail 1</div>
           </div>
-          <div class="photos hide" data-type="photos" data-scroll="h" data-hidden="20" data-in="transition::opacity:1!.4s ease" style="opacity:0;">
+          <div class="photos hide" data-type="photos" data-mode="screen" data-scroll="horizontal" data-hidden="50" data-in="transition::opacity:1!.4s ease" style="opacity:0;">
             <div class="photo" data-type="photo" style="background:blue;">1.1</div>
             <div class="photo" data-type="photo" style="background:green;">1.2</div>
             <div class="photo" data-type="photo" style="background:yellow;">1.3</div>
@@ -39,7 +39,7 @@
           <div class="thumbnail" data-type="thumbnail" data-action="Action://albums/show">
             <div>thumbnail 2</div>
           </div>
-          <div class="photos hide" data-type="photos" data-scroll="h" data-hidden="20" data-in="transition::opacity:1!.4s ease" style="opacity:0;">
+          <div class="photos hide" data-type="photos" data-mode="screen" data-scroll="vertical" data-hidden="50" data-in="transition::opacity:1!.4s ease" style="opacity:0;">
             <div class="photo" data-type="photo" style="background:blue;">2.1</div>
             <div class="photo" data-type="photo" style="background:green;">2.2</div>
             <div class="photo" data-type="photo" style="background:yellow;">2.3</div>

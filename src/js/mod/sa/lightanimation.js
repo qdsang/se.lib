@@ -52,6 +52,16 @@
         return tmp;
     };
 
+    var css = function(el, name, value){
+        var prefix = getPrefixStyle(name);
+
+        if((undefined === prefix || prefix == name)){
+            el.css(name, value);
+        }else{
+            el.css(prefix, value);
+        }
+    };
+
     var transformPrefixs = getPrefixStyle("transform");
     var transitionPrefixs = getPrefixStyle("transition");
     var animationPrefixs = getPrefixStyle("animation");
@@ -83,16 +93,18 @@
                        
                         if(undefined !== p && p != key){
                             list.push(p + ": " + v);
+                        }else{
+                            list.push(key + ": " + v);
                         }
-                        list.push(key + ": " + v);
                     }
                 }
 
                 if(transform.length > 0){
                     if(transformPrefixs){
                         list.push(transformPrefixs + ": " + transform.join(" "));
+                    }else{
+                        list.push("transform: " + transform.join(" "));
                     }
-                    list.push("transform: " + transform.join(" "));
                 }
 
                 this.frames.push(frame + " {" + list.join("; ") + "}");
@@ -110,7 +122,7 @@
             keyframes.push("@" + hack + str);
             keyframes.push("@" + key + str);
 
-            $("head").append('<style type="text/css">'+ keyframes.join("\n") +'</style>');
+            $("head").append('<style type="text/css">\n'+ keyframes.join("\n") +'\n</style>');
         }
     };
 
@@ -456,6 +468,10 @@
             this.domNode.style.cssText = this.runtimeStyle = this.backupStyle;
             this.target.attr("data-subqueue", "0");
             this.current = 0;
+        },
+        remove : function(){
+            css(this.target, "transition", "");
+            css(this.target, "animation", "");
         }
     };
 
@@ -502,6 +518,11 @@
                 },
                 "reset" : function(){
                     la.reset();
+
+                    return this;
+                },
+                "remove" : function(){
+                    la.remove();
 
                     return this;
                 }

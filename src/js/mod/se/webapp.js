@@ -291,20 +291,20 @@
 
             _ins.preventTouchMove();
 
-            st = this.sceneTransition = ST.newInstance("section", _ins.mode, _ins.scroll);
+            st = _ins.sceneTransition = ST.newInstance("section", _ins.mode, _ins.scroll);
             st.setDeg(_ins.sceneDeg);
             st.setDuration(_ins.sceneDuration);
             st.setPerspective(_ins.scenePerspective);
 
             st.set("start", {
-                callback: function(e, x, y, target, index){
-                    this.exec("start", [target, index]);
+                callback: function(e, x, y, shiftX, shiftY, distance, index){
+                    this.exec("start", [e, x, y, shiftX, shiftY, distance, index]);
                 },
                 context: _ins
             });
-            st.set("drawing", {
-                callback: function(e, x, y, target, index){
-                    this.exec("scrolling", [target, index]);
+            st.set("move", {
+                callback: function(e, x, y, shiftX, shiftY, distance, index){
+                    this.exec("scrolling", [e, x, y, shiftX, shiftY, distance, index]);
                 },
                 context: _ins
             });
@@ -316,7 +316,7 @@
                     _ins.showModuleWidget(index);
                     _ins.restoreExceptModuleWidget(index);
                     _ins.execLazyLoading(index);
-                    _ins.exec("end", [null, index]);
+                    _ins.exec("end", [e, index]);
                 },
                 context: _ins
             });
