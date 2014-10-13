@@ -164,6 +164,7 @@
                             data.albums.exec("hidden", []);
                         });
                         stage.css("opacity", 0);
+                        st.restore();
                     }
                 },
                 context: _ins,

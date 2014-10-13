@@ -145,6 +145,23 @@
         setLocked : function(locked){
             this.locked = locked;
         },
+        restore : function(){
+            this.moveDirection = 1; //1: prev, -1: next
+            this.lockedDirection = 0;
+            this.enterScene = undefined;
+            this.exitScene = undefined;
+
+            this.enabled = true;
+            this.locked = false;
+            this.touched = false; //true: touch事件   false: 无事件/transition事件
+            this.animate = false;
+            this.startX = 0;
+            this.startY = 0;
+            this.endX = 0;
+            this.endY = 0;
+
+            this.updateSceneIndex(0);
+        },
         updateSceneIndex : function(index){
             this.currentIndex = index;
             this.prevIndex = (0 >= index ? this.lastIndex : index - 1);
@@ -174,7 +191,7 @@
             var data = e.data;
             var target = e.currentTarget;
 
-            if(target != data.exitScene[0]){
+            if(!data.exitScene || target != data.exitScene[0]){
                 return 0;
             }
 
@@ -826,6 +843,11 @@
                 },
                 "preventDefault" : function(){
                     st.preventDefault();
+
+                    return this;
+                },
+                "restore" : function(){
+                    st.restore();
 
                     return this;
                 }
