@@ -107,6 +107,7 @@
         this.locked = false;
         this.sceneDeg = 28;
         this.sceneDuration = .28;
+        this.sceneTiming = "ease";
         this.scenePerspective = "300px";
         this.sceneTransition = null;
 
@@ -294,6 +295,7 @@
             st = _ins.sceneTransition = ST.newInstance("section", _ins.mode, _ins.scroll);
             st.setDeg(_ins.sceneDeg);
             st.setDuration(_ins.sceneDuration);
+            st.setTiming(_ins.sceneTiming);
             st.setPerspective(_ins.scenePerspective);
 
             st.set("start", {
@@ -499,6 +501,11 @@
                 },
                 "setSceneDuration" : function(duration){
                     app.sceneDuration = duration;
+
+                    return this;
+                },
+                "setSceneTiming" : function(timing){
+                    app.sceneTiming = timing;
 
                     return this;
                 },

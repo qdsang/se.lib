@@ -58,6 +58,7 @@
         this.deg = 28;
         this.screenScale = .7;
         this.duration = .28;
+        this.timing = "ease";
         this.perspective = "300px";
         
         var offset = this.stage.offset();
@@ -135,6 +136,9 @@
         },
         setDuration : function(duration){
             this.duration = duration;
+        },
+        setTiming : function(timing){
+            this.timing = timing;
         },
         setPerspective : function(perspective){
             this.perspective = perspective;
@@ -248,7 +252,8 @@
                     var shiftY = y - data.startY;
                     var distance = Direction.HORZIONTAL == data.direction ? shiftX : shiftY;
                     var shift = Math.abs(distance);
-                    var ratio = Direction.HORZIONTAL == data.direction ? 0.25 : 0.2;
+                    var ratio = Direction.HORZIONTAL == data.direction ? 0.35 : 0.3;
+                    var shiftRatio = Direction.HORZIONTAL == data.direction ? 0.25 : 0.2;
                     var args = [e, x, y, shiftX, shiftY, distance, data.currentIndex];
 
                     data.moveDirection = distance / shift; //1: prev, -1: next
@@ -257,7 +262,7 @@
                         return 1;
                     }
 
-                    if(shift < 10){
+                    if(shift < data.offset * shiftRatio){
                         return 1;
                     }
 
@@ -319,7 +324,7 @@
                 var __super__ = this["super"];
 
                 Style.css(__super__.scenes, "transformOrigin", "0 100%");
-                Style.css(__super__.scenes, "transitionTimingFunction", "ease-out");
+                Style.css(__super__.scenes, "transitionTimingFunction", __super__.timing);
                 Style.css(__super__.stage, "perspective", __super__.perspective);
             },
             layout : function(){
@@ -502,7 +507,7 @@
                 var __super__ = this["super"];
 
                 Style.css(__super__.scenes, "transformOrigin", "50% 50%");
-                Style.css(__super__.scenes, "transitionTimingFunction", "ease-out");
+                Style.css(__super__.scenes, "transitionTimingFunction", __super__.timing);
             },
             layout : function(){
                 var __super__ = this["super"];
@@ -653,7 +658,7 @@
                 var __super__ = this["super"];
 
                 Style.css(__super__.scenes, "transformOrigin", "50% 50%");
-                Style.css(__super__.scenes, "transitionTimingFunction", "ease-out");
+                Style.css(__super__.scenes, "transitionTimingFunction", __super__.timing);
             },
             layout : function(){
                 var __super__ = this["super"];
@@ -828,6 +833,11 @@
                 },
                 "setDuration" : function(duration){
                     st.setDuration(duration);
+
+                    return this;
+                },
+                "setTiming" : function(timing){
+                    st.setTiming(timing);
 
                     return this;
                 },
