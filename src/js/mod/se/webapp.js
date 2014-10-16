@@ -300,12 +300,14 @@
 
             st.set("start", {
                 callback: function(e, x, y, shiftX, shiftY, distance, index){
+                    this.currentIndex = index;
                     this.exec("start", [e, x, y, shiftX, shiftY, distance, index]);
                 },
                 context: _ins
             });
             st.set("move", {
                 callback: function(e, x, y, shiftX, shiftY, distance, index){
+                    this.currentIndex = index;
                     this.exec("scrolling", [e, x, y, shiftX, shiftY, distance, index]);
                 },
                 context: _ins
@@ -458,6 +460,9 @@
                     this.widgetMode = app.widgetMode;
 
                     app.exec("init", []);
+                },
+                "getCurrentIndex" : function(){
+                    return app.currentIndex;
                 },
                 "set" : function(type, options){
                     app.set(type, options);

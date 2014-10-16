@@ -60,6 +60,9 @@
         this.duration = .28;
         this.timing = "ease";
         this.perspective = "300px";
+
+        this.moveRatio = .3;
+        this.shiftRatio = .2;
         
         var offset = this.stage.offset();
         this.offset = (Direction.HORZIONTAL == this.direction ? offset.width : offset.height);
@@ -252,8 +255,6 @@
                     var shiftY = y - data.startY;
                     var distance = Direction.HORZIONTAL == data.direction ? shiftX : shiftY;
                     var shift = Math.abs(distance);
-                    var ratio = Direction.HORZIONTAL == data.direction ? 0.35 : 0.3;
-                    var shiftRatio = Direction.HORZIONTAL == data.direction ? 0.25 : 0.2;
                     var args = [e, x, y, shiftX, shiftY, distance, data.currentIndex];
 
                     data.moveDirection = distance / shift; //1: prev, -1: next
@@ -262,7 +263,7 @@
                         return 1;
                     }
 
-                    if(shift < data.offset * shiftRatio){
+                    if(shift < data.offset * data.shiftRatio){
                         return 1;
                     }
 
@@ -275,7 +276,7 @@
                         data.run("start", args);
                     }
 
-                    if(shift < data.offset * ratio){
+                    if(shift < data.offset * data.moveRatio){
                         data.run("move", args);
                     }else{
                         data.animate = true;
@@ -843,6 +844,16 @@
                 },
                 "setPerspective" : function(perspective){
                     st.setPerspective(perspective);
+
+                    return this;
+                },
+                "setMoveRatio" : function(ratio){
+                    st.moveRatio = ratio;
+
+                    return this;
+                },
+                "setShiftRatio" : function(ratio){
+                    st.shiftRatio = ratio;
 
                     return this;
                 },

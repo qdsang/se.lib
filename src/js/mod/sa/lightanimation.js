@@ -52,16 +52,6 @@
         return tmp;
     };
 
-    var css = function(el, name, value){
-        var prefix = getPrefixStyle(name);
-
-        if((undefined === prefix || prefix == name)){
-            el.css(name, value);
-        }else{
-            el.css(prefix, value);
-        }
-    };
-
     var transformPrefixs = getPrefixStyle("transform");
     var transitionPrefixs = getPrefixStyle("transition");
     var animationPrefixs = getPrefixStyle("animation");
@@ -126,7 +116,7 @@
         }
     };
 
-    var _LightAnimation = function(target, source){
+    var _LightAnimation = function(target, source, bind){
         this.target = $(target);
         this.domNode = this.target[0];
         this.backupStyle = this.domNode.style.cssText;
@@ -146,32 +136,8 @@
             oncomplete : null  
         });
 
-        var bind = this.target.attr("data-bindla");
-
-        if("1" != bind){
-            this.target.on("webkitAnimationStart", "", this, function(e){
-                var data = e.data;
-
-                data.animationStart(e);
-            });
-
-            this.target.on("webkitAnimationEnd", "", this, function(e){
-                var data = e.data;
-
-                data.animationEnd(e);
-            });
-
-            this.target.on("webkitAnimationIteration", "", this, function(e){
-                var data = e.data;
-
-                data.animationIteration(e);
-            });
-
-            this.target.on("webkitTransitionEnd", "", this, function(e){
-                var data = e.data;
-                
-                data.transitionEnd(e);
-            });
+        if(false !== bind){
+            this.on();
         }
     };
 
@@ -213,6 +179,48 @@
          */
         clear : function(){
             this.listener.clear();
+        },
+        off : function(){
+            var ins = this;
+            var target = ins.target;
+
+            target.off("webkitAnimationStart", "")
+                  .off("webkitAnimationEnd", "")
+                  .off("webkitAnimationIteration", "")
+                  .off("webkitTransitionEnd", "");
+        },
+        on : function(force){
+            var ins = this;
+            var target = ins.target;
+            var bind = target.attr("data-bindla");
+
+            if("1" != bind || true === force){
+                ins.off();
+
+                target.on("webkitAnimationStart", "", ins, function(e){
+                    var data = e.data;
+
+                    data.animationStart(e);
+                });
+
+                target.on("webkitAnimationEnd", "", ins, function(e){
+                    var data = e.data;
+
+                    data.animationEnd(e);
+                });
+
+                target.on("webkitAnimationIteration", "", ins, function(e){
+                    var data = e.data;
+
+                    data.animationIteration(e);
+                });
+
+                target.on("webkitTransitionEnd", "", ins, function(e){
+                    var data = e.data;
+                    
+                    data.transitionEnd(e);
+                });
+            }
         },
         animationStart : function(e){
             e.preventDefault();
@@ -468,16 +476,12 @@
             this.domNode.style.cssText = this.runtimeStyle = this.backupStyle;
             this.target.attr("data-subqueue", "0");
             this.current = 0;
-        },
-        remove : function(){
-            css(this.target, "transition", "");
-            css(this.target, "animation", "");
         }
     };
 
     var _pub = {
-        newInstance : function(target, source){
-            var la = new _LightAnimation(target, source);
+        newInstance : function(target, source, bind){
+            var la = new _LightAnimation(target, source, bind);
 
             return {
                 "target" : la.target,
@@ -521,8 +525,13 @@
 
                     return this;
                 },
-                "remove" : function(){
-                    la.remove();
+                "off" : function(){
+                    la.off();
+
+                    return this;
+                },
+                "on" : function(force){
+                    la.on(force);
 
                     return this;
                 }
