@@ -49,6 +49,16 @@
         return "-" + vendor.toLowerCase() + "-" + cssname(style);
     };
 
+    var getRealPropertyName = function(name){
+        var prefix = getPrefixStyle(name);
+
+        if((undefined === prefix || prefix == name)){
+            return name;
+        }else{
+            return prefix;
+        }
+    };
+
     var cssname = function(property){
         var tmp = property.replace(/([A-Z])/g, "-$1").toLowerCase();
 
@@ -56,20 +66,20 @@
     };
 
     var css = function(el, name, value){
-        var prefix = getPrefixStyle(name);
+        el.css(getRealPropertyName(name), value);
+    };
 
-        if((undefined === prefix || prefix == name)){
-            el.css(name, value);
-        }else{
-            el.css(prefix, value);
-        }
+    var isTransformMethod = function(name){
+        return funcs.test(name);
     };
 
     module.exports = {
         "hasProperty" : hasProperty,
         "getRealStyle": getRealStyle,
         "getPrefixStyle": getPrefixStyle,
+        "getRealPropertyName": getRealPropertyName,
         "cssname": cssname,
-        "css": css
+        "css": css,
+        "isTransformMethod": isTransformMethod
     };
 });

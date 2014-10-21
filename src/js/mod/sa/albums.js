@@ -3,7 +3,7 @@
  **********************************************************/
 
 /**
- * 图片播放器
+ * 相集
  * @charset utf-8
  * @author lijun
  * @git: https://github.com/zwlijun/se.lib

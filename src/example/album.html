@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+
+<html class="webapp" data-mode="screen" data-scroll="vertical" id="webapp">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, minimal-ui" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="format-detection"content="telephone=no, email=no" />
+  <title>Web App</title>
+  <link rel="stylesheet" type="text/css" href="/css/lib/g.css">
+  <style type="text/css">
+    .album{width: 120px; height: 120px; margin: 30px; background-color: #ef83df}
+    .album .thumbnail{width: 100%; height: 100%; z-index: 1; background: red;}
+    .album .photos{width: 100%; height: 100%; position: absolute; left:0; top: 0; z-index: 1; background-color: rgba(0,0,0,0.8);}
+    .album .photo{-webkit-transform:scale(3) rotateZ(30deg) translate(80%,80%) translateZ(0); transform:scale(3) rotateZ(30deg) translate(80%,80%) translateZ(0);}
+  </style>
+</head>
+<body>
+<article class="webapp-view" id="view">
+  <div class="webapp-modules">
+    <section>
+     <div class="album" id="album" data-type="album" data-root="#view" data-album='{"direction":0,"thumbnail":true,"exit":30}' data-in="transition::marginTop:100px!1s ease">
+        <div class="thumbnail hide" data-type="thumbnail" data-action="Action://album/show#album">thumb.</div>
+        <div class="photos hide" data-type="photos" data-property='{"scale":0.8, "translate": "0%,0%", "translateZ":"0", "rotateZ":"0<1.6<deg"}' data-animate='{"duration":0.5, "timing":"ease", "delay":"0>0.3>s"}'>
+            <div class="photo" style="background:red" data-type="photo"></div>
+            <div class="photo" style="background:blue" data-type="photo"></div>
+            <div class="photo" style="background:yellow" data-type="photo"></div>
+            <div class="photo" style="background:gray" data-type="photo"></div>
+        </div>
+     </div>
+    </section>
+  </div>
+</article>
+<header class="webapp-header" id="header">Web App</header>
+<footer class="webapp-footer" id="footer">&copy; 2014</footer>
+<script src="/js/lib/zepto-1.1.4.js"></script>
+<script src="/js/lib/sea-2.3.0.js"></script>
+<script src="/js/lib/se.js"></script>
+<script>
+seajs.use(["logic/webapp","logic/album"], function(app, albums){
+  // body...
+});
+</script>
+</body>
+</html>

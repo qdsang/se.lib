@@ -516,7 +516,9 @@
                     return this;
                 },
                 "play" : function(){
-                    la.play();
+                    setTimeout(function(){
+                        la.play();
+                    }, 60);
                     
                     return this;
                 },

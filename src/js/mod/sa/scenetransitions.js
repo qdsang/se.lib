@@ -30,7 +30,7 @@
     var endEvent = touch ? "touchend" : "mouseup";
     var moveEvent = touch ? "touchmove" : "mousemove";
 
-    var _SceneTransitions = function(snap, effect, direction){
+    var _SceneTransitions = function(snap, effect, direction, bind){
         this.snap = snap;
         this.scenes = $(snap);
         this.size = this.scenes.length;
@@ -69,7 +69,10 @@
 
         if(effect in this){
             this.updateSceneIndex(0);
-            this.bind();
+
+            if(false !== bind){
+                this.bind();
+            }
             this.run("init", []);
         }else{
             throw new Error("this effect(" + effect + ") not yet implemented.");
@@ -221,13 +224,24 @@
                 return 0;
             }
         },
-        bind : function(){
+        off : function(){
+            var ins = this;
+            var stage = ins.stage;
+            var scenes = ins.scenes;
+
+            scenes.off(startEvent, '')
+                  .off(moveEvent, '')
+                  .off(endEvent, '');
+        },
+        bind : function(force){
             var ins = this;
             var stage = ins.stage;
             var scenes = ins.scenes;
             var isBind = stage.attr("data-sencestransition");
 
-            if("1" != isBind){
+            if("1" != isBind || true === force){
+                ins.off();
+
                 scenes.on(startEvent, '', ins, function(e){
                     var data = e.data;
                     var pointer = (("changedTouches" in e) ? e.changedTouches[0] : e);
@@ -805,8 +819,8 @@
     }; 
 
     var _pub = {
-        newInstance : function(snap, effect, direction){
-            var st = new _SceneTransitions(snap, effect, direction);
+        newInstance : function(snap, effect, direction, bind){
+            var st = new _SceneTransitions(snap, effect, direction, bind);
 
             return {
                 "stage": st.stage,
@@ -869,6 +883,16 @@
                 },
                 "restore" : function(){
                     st.restore();
+
+                    return this;
+                },
+                "off" : function(){
+                    st.off();
+
+                    return this;
+                },
+                "on" : function(force){
+                    st.bind(force);
 
                     return this;
                 }

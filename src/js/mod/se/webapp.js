@@ -403,24 +403,25 @@
             }
         },
         lazy : function(module){
-            var lazyItems = module.find("data-lazysrc");
+            var lazyItems = module.find("[data-lazysrc]");
 
             $.each(lazyItems, function(index, item){
                 var o = $(item);
+                var conf = o.attr("data-lazysrc");
+                var splitIndex = conf.indexOf("!");
+                var type = splitIndex != -1 ? conf.substring(0, splitIndex) : "src";
+                var source = splitIndex != -1 ? conf.substring(splitIndex + 1) : conf;
 
-                o.attr("src", o.attr("data-lazysrc"));
-            });
-
-            lazyItems = module.find("data-lazybg");
-
-            $.each(lazyItems, function(index, item){
-                var o = $(item);
-
-                o.css("background-image", "url(" + o.attr("data-lazybg") + ")");
+                if(type == "src"){
+                    o.attr("src", source);
+                }else{
+                    o.css("background-image", "url(" + source + ")");
+                }
             });
         },
         init : function(){
             var _ins = this;
+            _ins.currentIndex = 0;
 
             _ins.scroller = $(".webapp-modules");
             _ins.modules = $(".webapp-modules>section");
@@ -430,7 +431,18 @@
             _ins.widgetMode = _ins.app.attr("data-widget-mode") || WIDGET_MODE.ONCE;
 
             _ins.createViewport();
+            _ins.showModuleWidget(0);
+            _ins.restoreExceptModuleWidget(0);
+            _ins.execLazyLoading(0);
+            _ins.exec("end", [null, 0]);
+
             _ins.enterframe();
+
+            var loading = $(".webapp-loading");
+
+            if(loading.length > 0){
+                loading.addClass("hide");
+            }
 
             $(window).on("resize", "", _ins, function(e){
                 var data = e.data;
@@ -481,6 +493,11 @@
                 },
                 "setLazyLoading" : function(count){
                     app.setLazyLoading(count);
+
+                    return this;
+                },
+                "execLazyLoading" : function(index){
+                    app.execLazyLoading(index);
 
                     return this;
                 },
