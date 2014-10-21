@@ -8,13 +8,13 @@ define(function(require,exports,module){
 	a.set("loading", {
 		callback: function(){
 			console.info("loading");
-			//_app.setLocked(true);
+			_app.setLocked(true);
 		}
 	});
-	a.set("ready", {
+	a.set("exit", {
 		callback: function(){
-			console.info("ready");
-			//_app.setLocked(false);
+			console.info("exit");
+			_app.setLocked(false);
 		}
 	});
 

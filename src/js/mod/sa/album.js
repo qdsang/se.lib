@@ -170,6 +170,7 @@
                     data.startY = pointer.pageY;
                     data.moved = false;
 
+                    data.exec("start", []);
                 }).on(moveEvent, photo, this, function(e){
                     var data = e.data;
 
@@ -194,12 +195,35 @@
 
                     data.moved = true;
 
+                    data.exec("scrolling", []);
+
                 }).on(endEvent, photo, this, function(e){
                     var data = e.data;
+
+                    var pointer = (("changedTouches" in e) ? e.changedTouches[0] : e);
+                    var x = data.endX = pointer.pageX;
+                    var y = data.endY = pointer.pageY;
+
+                    var shiftX = x - data.startX;
+                    var shiftY = y - data.startY;
+
+                    if(Direction.HORZIONTAL == data.options.direction){
+                        shift = Math.abs(shiftY);
+                    }else{
+                        shift = Math.abs(shiftX);
+                    }
+
+                    if(shift > data.options.exit){
+                        data.exec("exit", []);
+
+                        return 1;
+                    }
                     
                     if(!data.ready || !data.moved){
                         return 1;
                     }
+
+                    data.exec("end", []);
 
                     if(data.moveDirection === 1){
                         data.prev()
