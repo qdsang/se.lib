@@ -174,7 +174,6 @@
             this.updateSceneIndex(0);
         },
         updateSceneIndex : function(index){
-            console.info("update..." + index)
             this.currentIndex = index;
             this.prevIndex = (0 >= index ? this.lastIndex : index - 1);
             this.nextIndex = (this.lastIndex === index ? 0 : index + 1);
@@ -827,7 +826,7 @@
 
             init : function(){
                 var __super__ = this["super"];
-                console.info("draw....")
+                
                 Style.css(__super__.scenes, "transformOrigin", "50% 50%");
                 Style.css(__super__.scenes, "transitionTimingFunction", __super__.timing);
             },
