@@ -1,7 +1,7 @@
 define(function(require,exports,module){
 	var ST = require("mod/sa/scenetransitions");
 
-	var st = ST.newInstance("section", "scale", "vertical");
+	var st = ST.newInstance("section", "draw", "vertical");
 
 	st.set("start", {
 		callback: function(event, x, y, shiftX, shiftY, distance, index){
