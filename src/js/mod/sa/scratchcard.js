@@ -88,7 +88,7 @@
 
             var ctx = this.context;
 
-            t.text && (ctx.font = t.font);
+            t.font && (ctx.font = t.font);
             t.textAlign && (ctx.textAlign = t.textAlign);
             t.textBaseline && (ctx.textBaseline = t.textBaseline);
             t.color && (ctx.fillStyle = t.color);

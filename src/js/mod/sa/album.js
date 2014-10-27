@@ -264,7 +264,7 @@
             if(Direction.HORZIONTAL == this.options.direction){
                 source = this.getSource(index, ani.setting, {"translate": "100%, 0%", "opacity": 0}, false);
             }else{
-                source = this.getSource(index, ani.setting, {"translate": "%, 100%", "opacity": 0}, false);
+                source = this.getSource(index, ani.setting, {"translate": "0%, 100%", "opacity": 0}, false);
             }
 
             if(next < 0){
@@ -276,22 +276,24 @@
             var photos = this.photos;
             var size = this.size;
             var photo = null;
+            var currentZIndex = 3 * size;
+            var lessZIndex = 0;
+            var zIndex = size - index;
 
             for(var i = 0; i < size; i++){
                 photo = $(photos[i]);
 
                 if(i === index){
                     photo.css({
-                        "zIndex": 3
+                        "zIndex": currentZIndex
                     });
-                    //Style.css(photo, "rotateZ")
-                }else if(i === next && next !== index){
+                }else if(i > index){
                     photo.css({
-                        "zIndex": 2
+                        "zIndex": lessZIndex++
                     });
                 }else{
                     photo.css({
-                        "zIndex": 1
+                        "zIndex": zIndex
                     });
                 }
             }
