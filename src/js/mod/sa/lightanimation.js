@@ -307,6 +307,7 @@
             var queue = [];
 
             for(var i = 0; i < length; i++){
+                transform = [];
                 items = groups[i];
                 conf = {
                     "properties": [],

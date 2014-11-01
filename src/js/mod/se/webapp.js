@@ -113,7 +113,7 @@
 
         this.listener = new Listener({
             oninit : null,              //初始化时的回调{Function callback, Array args, Object context}
-            onbegin : null,              //滑动开始{Function callback, Array args, Object context}
+            onstart : null,              //滑动开始{Function callback, Array args, Object context}
             onscrolling : null,           //滑动中{Function callback, Array args, Object context}
             onend : null,                //滑动结束{Function callback, Array args, Object context}
             onwidget : null,              //widget完成{Function callback, Array args, Object context}
