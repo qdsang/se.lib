@@ -194,6 +194,25 @@
                 tmp = null;
             });
         },
+        updateViewportMeta : function(w, h){
+            var _ins = this;
+            var viewport = _ins.viewport;
+            var content = [];
+            var meta = $('meta[name="viewport"]');
+
+            viewport.width = w || "device-width";
+            viewport.height = h || "device-height";
+
+            for(var key in viewport){
+                if(viewport[key]){
+                    content.push(key.replace(/_/g, "-") + "=" + viewport[key]);
+                }else{
+                    content.push(key);
+                }
+            }
+
+            meta.attr("content", content.join(", "));
+        },
         update : function(){
             var _ins = this;
             var viewport = _ins.viewport;
@@ -363,6 +382,7 @@
             var content = meta.attr("content");
             var group = null;
             var item = null;
+            var tmpKey = null;
             var key = null;
             var value = null;
             var splitIndex = 0;
@@ -373,8 +393,10 @@
             for(var i = 0, size = group.length; i < size; i++){
                 item = group[i];
                 splitIndex = item.indexOf("=");
-                key = (item.substring(0, splitIndex)).replace(/\-/g, "_");
+                tmpKey = item.substring(0, splitIndex);
                 value = item.substring(splitIndex + 1);
+                key = (tmpKey || value).replace(/\-/g, "_");
+                value = tmpKey ? value : "";
 
                 this.viewport[key] = value;
             }
@@ -533,6 +555,11 @@
                 },
                 "setScenePerspective" : function(perspective){
                     app.scenePerspective = perspective;
+
+                    return this;
+                },
+                "updateViewportMeta" : function(width, height){
+                    app.updateViewportMeta(width, height);
 
                     return this;
                 }
