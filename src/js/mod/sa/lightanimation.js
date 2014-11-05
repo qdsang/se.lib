@@ -308,6 +308,7 @@
 
             for(var i = 0; i < length; i++){
                 transform = [];
+                transformFlag = false;
                 items = groups[i];
                 conf = {
                     "properties": [],
@@ -450,7 +451,7 @@
                 var properties = effect.properties;
                 var values = effect.values;
                 var animate = effect.animate;
-
+                
                 var css = this.mergerCss(this.runtimeStyle, properties.join(";"), animate.join(";"));        
 
                 this.runtimeStyle = this.domNode.style.cssText = css; 

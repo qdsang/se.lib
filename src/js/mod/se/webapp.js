@@ -100,7 +100,7 @@
         this.mode = TransitionEffect.ROTATE;
         this.scroll = SCROLL.VERTICAL;
         this.widgetMode = WIDGET_MODE.ONCE;
-        this.device = {width:320, height:480, ratioWidth:"100%", ratioHeight:"100%"};
+        this.viewport = {width:"device-width", height:"device-height", user_scalable:"no"};
         this.currentIndex = 0;
         this.lazyLoading = 2;
         this.fps = 0;
@@ -196,8 +196,18 @@
         },
         update : function(){
             var _ins = this;
+            var viewport = _ins.viewport;
+
             var w = window.innerWidth;
             var h = window.innerHeight;
+
+            if(viewport.width != "device-width" && !isNaN(Number(viewport.width))){
+                w = Number(viewport.width);
+            }
+
+            if(viewport.height != "device-height" && !isNaN(Number(viewport.height))){
+                h = Number(viewport.height);
+            }
 
             var header = this.header ? this.header.offset() : {width:0, height:0};
             var footer = this.footer ? this.footer.offset() : {width:0, height:0};
@@ -209,8 +219,6 @@
                 height: h
             };
 
-            _ins.setAppDeviceSize();
-
             _ins.layout(_ins.view, v, v, null);
             _ins.layout(_ins.modules, v, v, {
                 callback: function(index, module){
@@ -219,10 +227,7 @@
                 context: _ins
             });
             _ins.layout(_ins.scroller, _ins.scroller.offset(), v, null);
-            _ins.layout(_ins.innerboxes, {
-                width: _ins.device.ratioWidth,
-                height: _ins.device.ratioHeight
-            }, v, null);
+            _ins.layout(_ins.innerboxes, v, v, null);
 
         },
         preventTouchMove : function(){
@@ -328,6 +333,7 @@
         createViewport : function(){
             var _ins = this;
 
+            _ins.parseViewportInfo();
             _ins.update();
             _ins.configure();
         },
@@ -352,35 +358,26 @@
                 }
             })
         },
-        setAppDeviceSize : function(){
-            var _ins = this;
-            var device = _ins.app.attr("data-device")||"";
-            var items = device.split("/");
-            var w = items[0] || "device-width";
-            var h = items[1] || "device-height";
-            var sw = window.innerWidth;
-            var sh = window.innerHeight;
+        parseViewportInfo : function(){
+            var meta = $('meta[name="viewport"]');
+            var content = meta.attr("content");
+            var group = null;
+            var item = null;
+            var key = null;
+            var value = null;
+            var splitIndex = 0;
 
-            w = isNaN(Number(w)) ? "device-width" : Number(w);
-            h = isNaN(Number(h)) ? "device-height" : Number(h);
+            content = content.replace(/,\s*/g, ",").replace(/\s*=\s*/g, "=");
+            group = content.split(",");
 
-            if("device-width" == w){
-                w = sw;
+            for(var i = 0, size = group.length; i < size; i++){
+                item = group[i];
+                splitIndex = item.indexOf("=");
+                key = (item.substring(0, splitIndex)).replace(/\-/g, "_");
+                value = item.substring(splitIndex + 1);
+
+                this.viewport[key] = value;
             }
-
-            if("device-height" == h){
-                h = sh;
-            }
-
-            w = Math.min(Math.max(w, 200), 10000);
-            h = Math.min(Math.max(h, 223), 10000);
-
-            _ins.device = {
-                "width": w,
-                "height": h,
-                "ratioWidth": "100%",
-                "ratioHeight": ((sw * h / w) / sh * 100) + "%"
-            };
         },
         setLazyLoading : function(count){
             this.lazyLoading = count || 0;
@@ -419,7 +416,7 @@
                 }
             });
         },
-        init : function(){
+        init : function(isAutoLoadWidget){
             var _ins = this;
             _ins.currentIndex = 0;
 
@@ -431,8 +428,11 @@
             _ins.widgetMode = _ins.app.attr("data-widget-mode") || WIDGET_MODE.ONCE;
 
             _ins.createViewport();
-            _ins.showModuleWidget(0);
-            _ins.restoreExceptModuleWidget(0);
+
+            if(false !== isAutoLoadWidget){
+                _ins.showModuleWidget(0);
+                _ins.restoreExceptModuleWidget(0);
+            }
             _ins.execLazyLoading(0);
             _ins.exec("end", [null, 0]);
 
@@ -464,8 +464,8 @@
                 "mode" : TransitionEffect.ROTATE,
                 "scroll" : SCROLL.VERTICAL,
                 "widgetMode" : WIDGET_MODE.ONCE,
-                "create" : function(){
-                    app.init();
+                "create" : function(isAutoLoadWidget){
+                    app.init(isAutoLoadWidget);
 
                     this.mode = app.mode;
                     this.scroll = app.scroll;
