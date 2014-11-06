@@ -127,6 +127,7 @@
         this.current = 0;
         this.queue = this.parse(source);
         this.keyframes = {};
+        this.animationIndex = 0;
 
         this.listener = new Listener({
             ontransitionEnd : null, 
@@ -271,14 +272,14 @@
             var target = data.target;
             var s = target.css(getRealStyle("transition"));
             var size = s.split(",").length;
-            var tmp = Number(target.attr("data-subqueue") || 0);
-            if(size == ++tmp){
-                data.exec("transitionEnd", [target, data.current]);
+            var tmp = ++data.animationIndex;
 
+            if(size == tmp){
+                data.exec("transitionEnd", [target, data.current]);
                 data.current++;
+                data.animationIndex = 0;
                 data.__play__();
             }
-            target.attr("data-subqueue", tmp);
         },
         parse : function(source){
             var schemaSeparator = "::";
@@ -446,7 +447,7 @@
         },
         __play__ : function(){
             var effect = this.queue[this.current];
-
+            
             if(effect){
                 var properties = effect.properties;
                 var values = effect.values;
@@ -476,7 +477,7 @@
         },
         reset : function(){
             this.domNode.style.cssText = this.runtimeStyle = this.backupStyle;
-            this.target.attr("data-subqueue", "0");
+            this.animationIndex = 0;
             this.current = 0;
         }
     };

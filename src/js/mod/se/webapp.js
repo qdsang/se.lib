@@ -27,6 +27,11 @@
         "EVERYTIME": "everytime"
     };
 
+    var OVERFLOW = {
+        "ADAPTIVE": "adaptive",
+        "HIDDEN": "hidden"
+    };
+
     var Widget = function(app, module, widget, data){
         this.app = app;
         this.module = module;
@@ -100,6 +105,8 @@
         this.mode = TransitionEffect.ROTATE;
         this.scroll = SCROLL.VERTICAL;
         this.widgetMode = WIDGET_MODE.ONCE;
+        this.overflow = OVERFLOW.ADAPTIVE;
+        this.design = {width: 640, height: 960};
         this.viewport = {width:"device-width", height:"device-height", user_scalable:"no"};
         this.currentIndex = 0;
         this.lazyLoading = 2;
@@ -121,6 +128,9 @@
             onorientationchange : null,   //横竖屏切换
             onenterframe : null          //enterframe回调{Function callback, Array args, Object context}
         });
+        //------------------------------------
+        this.parseDesignSize();
+        this.parseViewportInfo();
     };
 
     _WebApp.prototype = {
@@ -194,20 +204,26 @@
                 tmp = null;
             });
         },
-        updateViewportMeta : function(w, h){
+        updateViewportMeta : function(options){
             var _ins = this;
             var viewport = _ins.viewport;
             var content = [];
             var meta = $('meta[name="viewport"]');
 
-            viewport.width = w || "device-width";
-            viewport.height = h || "device-height";
+            var tmp = $.extend(true, {}, viewport, options || {});
+            var value = null;
 
-            for(var key in viewport){
-                if(viewport[key]){
-                    content.push(key.replace(/_/g, "-") + "=" + viewport[key]);
-                }else{
-                    content.push(key);
+            for(var key in tmp){
+                if(tmp.hasOwnProperty(key)){
+                    value = tmp[key];
+                    key = key.replace(/_/g, "-");
+                    if(value){
+                        if("REMOVE" != value){
+                            content.push(key + "=" + value);
+                        }
+                    }else{
+                        content.push(key);
+                    }
                 }
             }
 
@@ -216,9 +232,13 @@
         update : function(){
             var _ins = this;
             var viewport = _ins.viewport;
+            var design = _ins.design;
+            var offset = _ins.view.offset();
 
-            var w = window.innerWidth;
-            var h = window.innerHeight;
+            var w = offset.width;
+            var h = offset.height;
+            var dw = design.width;
+            var dh = design.height;
 
             if(viewport.width != "device-width" && !isNaN(Number(viewport.width))){
                 w = Number(viewport.width);
@@ -238,6 +258,11 @@
                 height: h
             };
 
+            var iv = {
+                width: (_ins.overflow == OVERFLOW.HIDDEN ? Math.max(w, dw) : w),
+                height: (_ins.overflow == OVERFLOW.HIDDEN ? Math.max(h, dh) : h)
+            };
+
             _ins.layout(_ins.view, v, v, null);
             _ins.layout(_ins.modules, v, v, {
                 callback: function(index, module){
@@ -246,7 +271,7 @@
                 context: _ins
             });
             _ins.layout(_ins.scroller, _ins.scroller.offset(), v, null);
-            _ins.layout(_ins.innerboxes, v, v, null);
+            _ins.layout(_ins.innerboxes, iv, iv, null);
 
         },
         preventTouchMove : function(){
@@ -352,7 +377,6 @@
         createViewport : function(){
             var _ins = this;
 
-            _ins.parseViewportInfo();
             _ins.update();
             _ins.configure();
         },
@@ -376,6 +400,17 @@
                     requestAnimationFrame(arguments.callee);
                 }
             })
+        },
+        parseDesignSize : function(){
+            var str = this.app.attr("data-design") || "640/960";
+            var items = str.split("/");
+            var width = Number(items[0]);
+            var height = Number(items[1]);
+
+            this.design = {
+                "width": width,
+                "height": height
+            };
         },
         parseViewportInfo : function(){
             var meta = $('meta[name="viewport"]');
@@ -448,6 +483,7 @@
             _ins.mode = _ins.app.attr("data-mode") || TransitionEffect.ROTATE;
             _ins.scroll = _ins.app.attr("data-scroll") || SCROLL.VERTICAL;
             _ins.widgetMode = _ins.app.attr("data-widget-mode") || WIDGET_MODE.ONCE;
+            _ins.overflow = _ins.app.attr("data-overflow") || OVERFLOW.ADAPTIVE;
 
             _ins.createViewport();
 
@@ -486,12 +522,27 @@
                 "mode" : TransitionEffect.ROTATE,
                 "scroll" : SCROLL.VERTICAL,
                 "widgetMode" : WIDGET_MODE.ONCE,
+                "overflow" : OVERFLOW.ADAPTIVE,
+                "design": app.design,
+                "app" : app.app,
+                "view" : app.view,
+                "header" : app.header,
+                "footer" : app.footer,
+                "scroller" : null,
+                "modules" : null,
+                "innerboxes" : null,
+                "viewport" : app.viewport,
                 "create" : function(isAutoLoadWidget){
                     app.init(isAutoLoadWidget);
 
                     this.mode = app.mode;
                     this.scroll = app.scroll;
                     this.widgetMode = app.widgetMode;
+                    this.overflow = app.overflow;
+                    this.design = app.design;
+                    this.scroller = app.scroller;
+                    this.modules = app.modules;
+                    this.innerboxes = app.innerboxes;
 
                     app.exec("init", []);
                 },
@@ -558,8 +609,8 @@
 
                     return this;
                 },
-                "updateViewportMeta" : function(width, height){
-                    app.updateViewportMeta(width, height);
+                "updateViewportMeta" : function(options){
+                    app.updateViewportMeta(options);
 
                     return this;
                 }
