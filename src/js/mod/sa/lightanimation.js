@@ -11,61 +11,18 @@
  */
 ;define(function (require, exports, module){
                    require("mod/polyfill/array");
+    var Style    = require("mod/polyfill/css");
     var Listener = require("mod/se/listener");
 
-    var vendors = ["webkit", "Moz", "ms", "O", ""];
-    var vendorLength = vendors.length;
-    var nodeStyle = document.createElement("div").style;
-    var funcs = /^((translate|rotate|scale)(X|Y|Z|3d)?|skew(X|Y)|matrix(3d)?|perspective)$/;
-
-    var vendor = (function(){
-        var key = "";
-        var prefix = "";
-
-        for(var i = 0; i < vendorLength; i++){
-            prefix = vendors[i];
-            key = (prefix ? prefix + "T" : "t") + "ransform";
-
-            if(key in nodeStyle){
-                return prefix;
-            }
-        }
-
-        return undefined;
-    })();
-
-    var getRealStyle = function(style){
-        if(undefined === vendor) return undefined;
-        if("" === vendor || (style in nodeStyle)) return style;
-        return vendor + style.charAt(0).toUpperCase() + style.substr(1);
-    };
-
-    var getPrefixStyle = function(style){
-        if(undefined === vendor) return undefined;
-        if("" === vendor || (style in nodeStyle)) return style;
-        return "-" + vendor.toLowerCase() + "-" + cssname(style);
-    };
-
-    var cssname = function(property){
-        var tmp = property.replace(/([A-Z])/g, "-$1").toLowerCase();
-
-        return tmp;
-    };
-
-    var transformPrefixs = getPrefixStyle("transform");
-    var transitionPrefixs = getPrefixStyle("transition");
-    var animationPrefixs = getPrefixStyle("animation");
-
-
-    transformPrefixs = (undefined === transformPrefixs || transformPrefixs == "transform") ? "" : transformPrefixs;
-    transitionPrefixs = (undefined === transitionPrefixs || transitionPrefixs == "transition") ? "" : transitionPrefixs;
-    animationPrefixs = (undefined === animationPrefixs || animationPrefixs == "animation") ? "" : animationPrefixs;
+    var transformPrefixs = Style.getRealPropertyName("transform");
+    var transitionPrefixs = Style.getRealPropertyName("transition");
+    var animationPrefixs = Style.getRealPropertyName("animation");
 
     var _KeyFrame = function(name){
         this.name = name;
         this.frames = [];
     };
-
+    
     _KeyFrame.prototype = {
         push : function(frame, properties){
             if(this.frames.indexOf(frame) == -1){
@@ -74,27 +31,21 @@
                 var v = "";
                 var transform = [];
                 for(var key in properties){
-                    v = properties[key];
+                    if(properties.hasOwnProperty(key)){
+                        v = properties[key];
 
-                    if(funcs.test(key)){
-                        transform.push(key + "(" + v + ")");
-                    }else{
-                        p = getPrefixStyle(key);
-                       
-                        if(undefined !== p && p != key){
-                            list.push(p + ": " + v);
+                        if(Style.isTransformMethod(key)){
+                            transform.push(key + "(" + v + ")");
                         }else{
-                            list.push(key + ": " + v);
+                            p = Style.getRealPropertyName(key);
+                            
+                            list.push(p + ": " + v);
                         }
                     }
                 }
 
                 if(transform.length > 0){
-                    if(transformPrefixs){
-                        list.push(transformPrefixs + ": " + transform.join(" "));
-                    }else{
-                        list.push("transform: " + transform.join(" "));
-                    }
+                    list.push(transformPrefixs + ": " + transform.join(" "));
                 }
 
                 this.frames.push(frame + " {" + list.join("; ") + "}");
@@ -232,7 +183,7 @@
             data.exec("animationStart", [data.target, data.current]);
 
             var it = "animationIterationCount";
-            var pit = getRealStyle(it);
+            var pit = Style.getRealStyle(it);
 
             var itc = data.domNode.style[it];
 
@@ -270,7 +221,7 @@
 
             var data = this;
             var target = data.target;
-            var s = target.css(getRealStyle("transition"));
+            var s = target.css(Style.getRealStyle("transition"));
             var size = s.split(",").length;
             var tmp = ++data.animationIndex;
 
@@ -323,55 +274,34 @@
                         var property = result[1];
                         var value = result[2];
                         var animate = result[3] || "";
-                        var prefixs = getPrefixStyle(property);
-                        var css = cssname(property);
+                        var prefixs = Style.getRealPropertyName(property);
+                        var css = Style.cssname(prefixs);
 
-                        prefixs = (undefined === prefixs || prefixs == property) ? "" : prefixs;
-
-                        if(funcs.test(property)){
+                        if(Style.isTransformMethod(property)){
 
                             transform.push(property + "(" + value + ")");
 
                             if(animate && false === transformFlag){
-                                if(transformPrefixs){
-                                    conf.values.push(transformPrefixs + " " + animate);
-                                }else{
-                                    conf.values.push("transform " + animate);
-                                }
+                                conf.values.push(transformPrefixs + " " + animate);
 
                                 transformFlag = true;
                             }
                         }else{
-                            if(prefixs){
-                                conf.properties.push(prefixs + ": " + value);
-                            }else{
-                                conf.properties.push(css + ": " + value);
-                            }
+                            conf.properties.push(css + ": " + value);
 
                             if(animate){
-                                if(prefixs){
-                                    conf.values.push(prefixs + " " + animate);
-                                }else{
-                                    conf.values.push(css + " " + animate);
-                                }
+                                conf.values.push(css + " " + animate);
                             }
                         }
                     }
                 }
 
                 if(transform.length > 0){
-                    if(transformPrefixs){
-                        conf.properties.push(transformPrefixs + ": " + transform.join(" "));
-                    }else{
-                        conf.properties.push("transform: " + transform.join(" "))
-                    }
+                    conf.properties.push(transformPrefixs + ": " + transform.join(" "));
                 }
 
-                if(transitionPrefixs){
-                    conf.animate.push(transitionPrefixs + ": " + conf.values.join(", "));
-                }else{
-                    conf.animate.push("transition: " + conf.values.join(", "));
-                }
+                conf.animate.push(transitionPrefixs + ": " + conf.values.join(", "));
+
                 queue.push(conf);
             }
 
@@ -405,13 +335,9 @@
                         conf.values.push(property + " " + animate);
                     }
                 }
-
                 
-                if(animationPrefixs){
-                    conf.animate.push(animationPrefixs + ": " + conf.values.join(", "));
-                }else{
-                    conf.animate.push("animation: " + conf.values.join(", "));
-                }
+                conf.animate.push(animationPrefixs + ": " + conf.values.join(", "));
+
                 queue.push(conf);
             }
 
@@ -453,7 +379,7 @@
                 var values = effect.values;
                 var animate = effect.animate;
                 
-                var css = this.mergerCss(this.runtimeStyle, properties.join(";"), animate.join(";"));        
+                var css = this.mergerCss(this.runtimeStyle, properties.join(";"), animate.join(";"));       
 
                 this.runtimeStyle = this.domNode.style.cssText = css; 
             }else{

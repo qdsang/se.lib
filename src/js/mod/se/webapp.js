@@ -27,9 +27,18 @@
         "EVERYTIME": "everytime"
     };
 
+    var ADAPTIVE = {
+        "NONE": "none",
+        "AUTO": "auto",
+        "X": "x",
+        "Y": "y"
+    };
+
     var OVERFLOW = {
         "ADAPTIVE": "adaptive",
-        "HIDDEN": "hidden"
+        "HIDDEN": "hidden",
+        "HIDDEN_X": "hidden-x",
+        "HIDDEN_Y": "hidden-y"
     };
 
     var Widget = function(app, module, widget, data){
@@ -105,6 +114,7 @@
         this.mode = TransitionEffect.ROTATE;
         this.scroll = SCROLL.VERTICAL;
         this.widgetMode = WIDGET_MODE.ONCE;
+        this.adaptive = ADAPTIVE.NONE;
         this.overflow = OVERFLOW.ADAPTIVE;
         this.design = {width: 640, height: 960};
         this.viewport = {width:"device-width", height:"device-height", user_scalable:"no"};
@@ -239,13 +249,15 @@
             var h = offset.height;
             var dw = design.width;
             var dh = design.height;
+            var vw = 0;
+            var vh = 0;
 
             if(viewport.width != "device-width" && !isNaN(Number(viewport.width))){
-                w = Number(viewport.width);
+                vw = Number(viewport.width);
             }
 
             if(viewport.height != "device-height" && !isNaN(Number(viewport.height))){
-                h = Number(viewport.height);
+                vh = Number(viewport.height);
             }
 
             var header = this.header ? this.header.offset() : {width:0, height:0};
@@ -254,13 +266,13 @@
             h = h - header.height - footer.height;
 
             var v = {
-                width: w,
-                height: h
+                width: (_ins.adaptive == ADAPTIVE.AUTO || _ins.adaptive == ADAPTIVE.X ? w : vw || w),
+                height: (_ins.adaptive == ADAPTIVE.AUTO || _ins.adaptive == ADAPTIVE.Y ? h : vh || h)
             };
 
             var iv = {
-                width: (_ins.overflow == OVERFLOW.HIDDEN ? Math.max(w, dw) : w),
-                height: (_ins.overflow == OVERFLOW.HIDDEN ? Math.max(h, dh) : h)
+                width: (_ins.overflow == OVERFLOW.HIDDEN || _ins.overflow == OVERFLOW.HIDDEN_X ? Math.max(w, dw) : w),
+                height: (_ins.overflow == OVERFLOW.HIDDEN || _ins.overflow == OVERFLOW.HIDDEN_Y ? Math.max(h, dh) : h)
             };
 
             _ins.layout(_ins.view, v, v, null);
@@ -383,6 +395,10 @@
         resize : function(){
             var _ins = this;
 
+            _ins.view.css({
+                "width": "100%",
+                "height": "100%"
+            });
             _ins.update();
         },
         enterframe : function(){
@@ -483,6 +499,7 @@
             _ins.mode = _ins.app.attr("data-mode") || TransitionEffect.ROTATE;
             _ins.scroll = _ins.app.attr("data-scroll") || SCROLL.VERTICAL;
             _ins.widgetMode = _ins.app.attr("data-widget-mode") || WIDGET_MODE.ONCE;
+            _ins.adaptive = _ins.app.attr("data-adaptive") || ADAPTIVE.NONE;
             _ins.overflow = _ins.app.attr("data-overflow") || OVERFLOW.ADAPTIVE;
 
             _ins.createViewport();
@@ -522,6 +539,7 @@
                 "mode" : TransitionEffect.ROTATE,
                 "scroll" : SCROLL.VERTICAL,
                 "widgetMode" : WIDGET_MODE.ONCE,
+                "adaptive" : ADAPTIVE.NONE,
                 "overflow" : OVERFLOW.ADAPTIVE,
                 "design": app.design,
                 "app" : app.app,
@@ -538,6 +556,7 @@
                     this.mode = app.mode;
                     this.scroll = app.scroll;
                     this.widgetMode = app.widgetMode;
+                    this.adaptive = app.adaptive;
                     this.overflow = app.overflow;
                     this.design = app.design;
                     this.scroller = app.scroller;
