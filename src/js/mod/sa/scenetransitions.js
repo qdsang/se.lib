@@ -156,7 +156,11 @@
         setLocked : function(locked){
             this.locked = locked;
         },
-        restore : function(){
+        destory : function(){
+            this.off();
+            this.restore(0);
+        },
+        restore : function(index){
             this.moveDirection = 1; //1: prev, -1: next
             this.lockedDirection = 0;
             this.enterScene = undefined;
@@ -171,7 +175,7 @@
             this.endX = 0;
             this.endY = 0;
 
-            this.updateSceneIndex(0);
+            this.updateSceneIndex(index || 0);
         },
         updateSceneIndex : function(index){
             this.currentIndex = index;
@@ -277,7 +281,7 @@
                     if(data.locked || !data.enabled || !data.touched){
                         return 1;
                     }
-
+                    
                     if(shift < data.offset * data.shiftRatio){
                         return 1;
                     }
@@ -1007,8 +1011,13 @@
 
                     return this;
                 },
-                "restore" : function(){
-                    st.restore();
+                "destory" : function(){
+                    st.destory();
+
+                    return this;
+                },
+                "restore" : function(index){
+                    st.restore(index);
 
                     return this;
                 },
