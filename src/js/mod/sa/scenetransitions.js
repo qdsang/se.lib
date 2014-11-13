@@ -39,7 +39,7 @@
 
         this.transitionEffect = effect || TransitionEffect.ROTATE;
         this.direction = direction || Direction.VERTICAL;
-        this.moveDirection = 1; //1: prev, -1: next
+        this.moveDirection = 0; //1: prev, -1: next
         this.lockedDirection = 0;
 
         this.lastIndex = Math.max(this.size - 1, 0);
@@ -161,7 +161,7 @@
             this.restore(0);
         },
         restore : function(index){
-            this.moveDirection = 1; //1: prev, -1: next
+            this.moveDirection = 0; //1: prev, -1: next
             this.lockedDirection = 0;
             this.enterScene = undefined;
             this.exitScene = undefined;
