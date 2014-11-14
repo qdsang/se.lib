@@ -83,11 +83,11 @@
         }
 
         if(headerId && oHeader.length != 1){
-            throw new Error("APP's `header` is not found(" + headerId + ")")
+            throw new Error("APP's `header` is not found(" + headerId + ")");
         }
 
         if(footerId && oFooter.length != 1){
-            throw new Error("APP's `footer` is not found(" + footerId + ")")
+            throw new Error("APP's `footer` is not found(" + footerId + ")");
         }
 
         if(oHeader.length != 1){
