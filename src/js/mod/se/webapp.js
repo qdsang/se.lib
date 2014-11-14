@@ -133,6 +133,7 @@
             onstart : null,              //滑动开始{Function callback, Array args, Object context}
             onscrolling : null,           //滑动中{Function callback, Array args, Object context}
             onend : null,                //滑动结束{Function callback, Array args, Object context}
+            onexit : null,                //退出
             onwidget : null,              //widget完成{Function callback, Array args, Object context}
             onresize : null,              //窗口大小重置{Function callback, Array args, Object context}
             onorientationchange : null,   //横竖屏切换
@@ -370,6 +371,13 @@
                 callback: function(e, x, y, shiftX, shiftY, distance, index){
                     this.currentIndex = index;
                     this.exec("scrolling", [e, x, y, shiftX, shiftY, distance, index]);
+                },
+                context: _ins
+            });
+            st.set("end", {
+                callback: function(e, x, y, shiftX, shiftY, distance, index){
+                    this.currentIndex = index;
+                    this.exec("exit", [e, x, y, shiftX, shiftY, distance, index]);
                 },
                 context: _ins
             });
