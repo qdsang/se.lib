@@ -1,7 +1,7 @@
 SE.Lib
 ======
 
-SE.Lib是一个基于zepto + seajs开发的前端库，主要应用于移动端和对PC端主流规范浏览器
+SE.Lib是一个基于zepto + seajs开发的前端库，致力于移动端的webapp开发。
 
 Example
 ======
