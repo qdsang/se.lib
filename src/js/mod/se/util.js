@@ -172,15 +172,17 @@
          * @param Array args 参数
          */
         execAfterMergerHandler : function(handler, _args){
+            var newHandler = $.extend(true, {}, handler);
+            
             if(handler && handler instanceof Object){
                 var callback = handler.callback || null;
                 var args = handler.args || [];
                 var context = handler.context || null;
 
-                handler.args = _args.concat(args);
+                newHandler.args = _args.concat(args);
             }
-            
-            this.execHandler(handler);
+
+            this.execHandler(newHandler);
         },
         /**
          * html解码

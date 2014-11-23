@@ -57,6 +57,7 @@
         this.y = 0;
         this.width = 0;
         this.height = 0;
+        this.preparing = false;
     };
 
     Turntable.prototype = {
@@ -98,6 +99,10 @@
         setCenterCoordinates : function(cx, cy){
             this.centerX = cx;
             this.centerX = cy;
+        },
+        setPreparing : function(preparing){
+            this.preparing = preparing;
+            this.startTime = new Date().getTime();
         },
         paint : function(resource, x, y, width, height){
             var img = new Image();
@@ -156,6 +161,21 @@
             this.stage.style[_prefixStyle("transform")] = "rotate(" + (angle % 360) + "deg)";
             this.stage.style[_prefixStyle("transformOrigin")] = x + " " + y;
         },
+        rotatePreparing : function(){
+            var atime = new Date().getTime();
+            var shiftTime = atime - this.startTime;
+
+            this.isRunning = true;
+            var angle = Tween.Liner.easeOut(shiftTime, this.beginAngle, this.changeAngle, this.duration);
+            //this.repaint(this.angle);
+            //this.repaintContext((~~(angle * 10)) / 10);
+            this.repaintStage((~~(angle * 10)) / 10);
+
+            if(shiftTime > this.duration){ //end
+                shiftTime = 0;
+                this.startTime = atime;
+            }
+        },
         rotate : function(){
             var atime = new Date().getTime();
             var shiftTime = atime - this.startTime;
@@ -176,7 +196,11 @@
         run : function(){
             var tt = this;
 
-            tt.rotate();
+            if(tt.preparing){
+                tt.rotatePreparing();
+            }else{
+                tt.rotate();
+            }
 
             if(undefined !== tt.rAF){
                 this.rAF = window.requestAnimationFrame(function(){
@@ -215,6 +239,11 @@
             },
             setCenterCoordinates : function(cx, cy){
                 tt.setCenterCoordinates(cx, cy);
+
+                return this;
+            },
+            setPreparing : function(preparing){
+                tt.setPreparing(preparing);
 
                 return this;
             },

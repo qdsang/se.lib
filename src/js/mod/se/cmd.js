@@ -192,22 +192,26 @@
         var _beforeSend = function(xhr, settings){
             //ajaxSetting.loadingText
             //loading...
-            Loading.show(settings.loadingText || "加载中...");
+            if(false !== this.showLoading){
+                Loading.show(this.loadingText || "加载中...");
+            }
 
             if(fnBeforeSend){
-                fnBeforeSend.apply(null, [xhr, settings]);
+                fnBeforeSend.apply(this, [xhr, settings]);
             }
 
             fnBeforeSend = null;
         };
         cmd.beforeSend = _beforeSend;
 
-        var _complete = function(xhr, settings){
+        var _complete = function(xhr, status){
             //hide loading...
-            Loading.hide();
+            if(false !== this.showLoading){
+                Loading.hide();
+            }
 
             if(fnComplete){
-                fnComplete.apply(null, [xhr, settings]);
+                fnComplete.apply(this, [xhr, status]);
             }
 
             fnComplete = null;
