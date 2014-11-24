@@ -10,9 +10,9 @@
  * @date 2014.4
  */
 ;define(function CMD(require, exports, module){
-    var Util    = $.Util    = require("mod/se/util.js");
-    var Request = $.Request = require("mod/se/request.js");
-    var DB      = $.Storage = require("mod/se/storage.js");
+    var Util    = $.Util    = require("mod/se/util");
+    var Request = $.Request = require("mod/se/request");
+    var DB      = $.Storage = require("mod/se/storage");
     var Loading = $.Loading = require("mod/se/loading");
 
     var ErrorMap = {
