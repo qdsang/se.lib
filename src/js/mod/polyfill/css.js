@@ -49,6 +49,12 @@
         return "-" + vendor.toLowerCase() + "-" + cssname(style);
     };
 
+    var getVendorHackKey = function(){
+        var key = (vendor || "").toLowerCase();
+
+        return key ? "-" + key + "-" : "";
+    };
+
     var getRealPropertyName = function(name){
         var prefix = getPrefixStyle(name);
 
@@ -78,6 +84,7 @@
         "getRealStyle": getRealStyle,
         "getPrefixStyle": getPrefixStyle,
         "getRealPropertyName": getRealPropertyName,
+        "getVendorHackKey": getVendorHackKey,
         "cssname": cssname,
         "css": css,
         "isTransformMethod": isTransformMethod

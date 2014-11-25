@@ -56,11 +56,13 @@
 
             var key = "keyframes";
             var name = this.name;
-            var hack = "-" + (vendor.toLowerCase()) + "-" + key;
+            var hack = Style.getVendorHackKey() + key;
             var str = " " + name + " {\n" + frames + "\n}";
             var keyframes = [];
 
-            keyframes.push("@" + hack + str);
+            if(hack != key){
+                keyframes.push("@" + hack + str);
+            }
             keyframes.push("@" + key + str);
 
             $("head").append('<style type="text/css">\n'+ keyframes.join("\n") +'\n</style>');
