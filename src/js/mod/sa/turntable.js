@@ -118,7 +118,7 @@
 
             img.onload = function(){
                 ctx.clearRect(x, y, stage.width, stage.height);
-                ctx.drawImage(img, x, y);
+                ctx.drawImage(img, x, y, stage.width, stage.height);
             }
 
             img.src = resource;

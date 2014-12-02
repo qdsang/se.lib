@@ -159,7 +159,9 @@
                     e.preventDefault();
                     e.stopPropagation();
 
-                    _LayerBox.hide();
+                    if(true === _public.maskclose){
+                        _LayerBox.hide();
+                    }
                 });
             }
         }, 0);
@@ -188,9 +190,7 @@
             return this;
         },
         hide : function(){
-            if(true === _public.maskclose){
-                _LayerBox.hide();
-            }
+            _LayerBox.hide();
 
             return this;
         }

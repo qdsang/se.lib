@@ -23,4 +23,8 @@ define(function(require,exports,module){
 	la2.printKeyFrames();
 
 	la2.play();
+
+	var la3 = LA.newInstance("#w3", "class::opacity animated fadeInDownBig!true");
+	la3.play();
+
 });

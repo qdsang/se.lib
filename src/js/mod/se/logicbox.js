@@ -33,7 +33,7 @@
 
     var _LogicBox = {
         //蒙版关闭，默认点击关闭
-        maskclose : 1,
+        maskclose : true,
         /**
          * 模板
          * @param String name LogicBox名称

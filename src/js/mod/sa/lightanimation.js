@@ -18,6 +18,13 @@
     var transitionPrefixs = Style.getRealPropertyName("transition");
     var animationPrefixs = Style.getRealPropertyName("animation");
 
+    var Types = {
+        "UNKNOWN": "unknown",
+        "TRANSITION": "transition",
+        "ANIMATION": "animation",
+        "CLASS": "class"
+    };
+
     var _KeyFrame = function(name){
         this.name = name;
         this.frames = [];
@@ -74,10 +81,15 @@
         this.domNode = this.target[0];
         this.backupStyle = this.domNode.style.cssText;
         this.runtimeStyle = this.backupStyle;
+        this.backupClass = this.domNode.className;
+        this.runtimeClass = this.backupClass;
         //transition::property:value!duration easing delay;property:value!duration easing delay>property:value!duration easing delay
-        //animation::name:!duration timing-function delay iteration-count direction fill-mode play-state;
+        //animation::name:!duration timing-function delay iteration-count direction fill-mode play-state
+        //class::className!append>className!append
+        //append -> true|false
         this.source = source;
         this.current = 0;
+        this.type = Types.TRANSITION;
         this.queue = this.parse(source);
         this.keyframes = {};
         this.animationIndex = 0;
@@ -240,11 +252,16 @@
             var schema = source.substring(0, schemaIndex);
             var properties = source.substr(schemaIndex + schemaSeparator.length);
 
-            if("transition" == schema){
+            this.type = schema;
+
+            if(Types.TRANSITION == schema){
                 return this.parseTransition(properties);
-            }else if("animation" == schema){
+            }else if(Types.ANIMATION == schema){
                 return this.parseAnimation(properties);
+            }else if(Types.CLASS == schema){
+                return this.parseClassName(properties);
             }else{
+                this.type = Types.UNKNOWN;
                 throw new Error("Unknown animation schema(" + schema + ")");
             }
         },
@@ -326,16 +343,14 @@
                     "values": [],
                     "animate": []
                 };
-                values = items.split(";");
+                values = items;
 
-                for(var j = 0, k = values.length; j < k; j++){
-                    while(null != (result = pattern.exec(values))){
-                        var property = result[1];
-                        var value = result[2];
-                        var animate = result[3] || "";
+                while(null != (result = pattern.exec(values))){
+                    var property = result[1];
+                    var value = result[2];
+                    var animate = result[3] || "";
 
-                        conf.values.push(property + " " + animate);
-                    }
+                    conf.values.push(property + " " + animate);
                 }
                 
                 conf.animate.push(animationPrefixs + ": " + conf.values.join(", "));
@@ -345,6 +360,39 @@
 
             return queue;
 
+        },
+        parseClassName : function(properties){
+            var groups = properties.split(">");
+            var length = groups.length;
+            var items = null;
+            var values = null;
+            var pattern = /^([^:!]+)!(.+)?$/g;
+            var result = null;
+            var conf = null;
+            var queue = [];
+
+            for(var i = 0; i < length; i++){
+                items = groups[i];
+                conf = {
+                    "properties": [],
+                    "values": [],
+                    "animate": []
+                };
+                values = items;
+
+                while(null != (result = pattern.exec(values))){
+                    var property = result[1];
+                    var value = result[2];
+                    var animate = "";
+
+                    conf.properties.push(property);
+                    conf.values.push("true" === value);
+                }
+
+                queue.push(conf);
+            }
+
+            return queue;
         },
         clearKeyFrames : function(){
             this.keyframes = {};
@@ -375,15 +423,25 @@
         },
         __play__ : function(){
             var effect = this.queue[this.current];
-            
+
             if(effect){
                 var properties = effect.properties;
                 var values = effect.values;
                 var animate = effect.animate;
                 
-                var css = this.mergerCss(this.runtimeStyle, properties.join(";"), animate.join(";"));       
+                if(Types.CLASS == this.type){
+                    if(true === values[0]){
+                        this.target.addClass(properties[0]);
+                    }else{
+                        this.target.removeClass()
+                                   .addClass(this.backupClass + " " + properties[0]);
+                    }
+                    this.runtimeClass = this.domNode.className;
+                }else{
+                    var css = this.mergerCss(this.runtimeStyle, properties.join(";"), animate.join(";"));       
 
-                this.runtimeStyle = this.domNode.style.cssText = css; 
+                    this.runtimeStyle = this.domNode.style.cssText = css; 
+                }
             }else{
                 this.exec("complete", [this.target]);
             }
@@ -397,6 +455,8 @@
             this.domNode = this.target[0];
             this.backupStyle = this.domNode.style.cssText;
             this.runtimeStyle = this.backupStyle;
+            this.backupClass = this.domNode.className;
+            this.runtimeClass = this.backupClass;
         },
         play : function(){
             this.reset();
@@ -404,7 +464,11 @@
             this.__play__();
         },
         reset : function(){
-            this.domNode.style.cssText = this.runtimeStyle = this.backupStyle;
+            if(Types.CLASS == this.type){
+                this.domNode.className = this.runtimeClass = this.backupClass;
+            }else{
+                this.domNode.style.cssText = this.runtimeStyle = this.backupStyle;
+            }
             this.animationIndex = 0;
             this.current = 0;
         }
