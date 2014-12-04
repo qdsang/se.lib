@@ -15,10 +15,8 @@
         //todo
     };
 
-    //Action事件委托
-    var __onAction = function(e){
-        var cur = $(e.currentTarget);
-        var action = cur.attr("data-action") || "";
+    var __action__ = function(node, e){
+        var action = node.attr("data-action") || "";
         var pattern = /^([a-zA-Z0-9_]+):\/\/([a-zA-Z0-9_\/]+)(#([^#]+))?$/;
         var result = pattern.exec(action);
         var _class = null;
@@ -61,12 +59,22 @@
                 }
 
                 if(null != _class && (_method in _class)){
-                    _class[_method].apply(null, [_data, cur, e]);
+                    _class[_method].apply(null, [_data, node, e]);
                 }
             }
         }
 
         return false;
+    }; 
+
+    //Action事件委托
+    var __onAction = function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        
+        var cur = $(e.currentTarget);
+        
+        return __action__(cur, e);
     };
     var _util = {
         //点击事件，如果支持touch，则用tap事件，否则用click事件
@@ -272,6 +280,14 @@
             }
 
             body = null;
+        },
+        /**
+         * 主动触发data-action
+         * @param Object 节点（zepto对象）
+         * @param Event e 事件
+         */
+        fireAction : function(actionNode, e){
+            return __action__(actionNode, e || null);
         },
         /**
          * 注入Action配置

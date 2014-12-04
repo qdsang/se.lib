@@ -529,11 +529,11 @@
 
             $(window).on("resize", "", _ins, function(e){
                 var data = e.data;
-                data.resize();
+                //data.resize();
                 data.exec("resize", []);
             }).on("orientationchange", "", _ins, function(e){
                 var data = e.data;
-                data.resize();
+                //data.resize();
                 data.exec("orientationchange", []);
             })
         }
@@ -638,6 +638,11 @@
                 },
                 "updateViewportMeta" : function(options){
                     app.updateViewportMeta(options);
+
+                    return this;
+                },
+                "resize": function(){
+                    app.resize();
 
                     return this;
                 }
