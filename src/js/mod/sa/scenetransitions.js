@@ -253,7 +253,7 @@
                     var x = data.startX = pointer.pageX;
                     var y = data.startY = pointer.pageY;
 
-                    if(data.locked || !data.enabled || data.touched){
+                    if(!data.enabled || data.touched){
                         return 1;
                     }
 

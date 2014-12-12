@@ -10,7 +10,8 @@
  * @date 2014.10
  */
 ;define(function (require, exports, module){
-                   require("http://player.youku.com/jsapi#YKU");
+                   //require("http://player.youku.com/jsapi#YKU");
+                   require("mod/open/jsapi/youku");
     var Util     = require("mod/se/util");
     var Listener = require("mod/se/listener");
 

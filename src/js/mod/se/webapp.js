@@ -16,6 +16,13 @@
     var Util = $.Util = require("mod/se/util");
     var LA            = require("mod/sa/lightanimation");
     var ST            = require("mod/sa/scenetransitions");
+    var Style         = require("mod/polyfill/css");
+
+    var translateZ = Style.hasProperty("perspective") ? "translateZ(0)" : "";
+    var touch = ("ontouchstart" in window);
+    var startEvent = touch ? "touchstart" : "mousedown";
+    var endEvent = touch ? "touchend" : "mouseup";
+    var moveEvent = touch ? "touchmove" : "mousemove";
 
     var SCROLL = {
         "VERTICAL": "vertical",
@@ -122,6 +129,7 @@
         this.lazyLoading = 2;
         this.fps = 0;
         this.locked = false;
+        this.forcedLock = false;
         this.sceneDeg = 28;
         this.sceneDuration = .28;
         this.sceneTiming = "ease";
@@ -137,7 +145,13 @@
             onwidget : null,              //widget完成{Function callback, Array args, Object context}
             onresize : null,              //窗口大小重置{Function callback, Array args, Object context}
             onorientationchange : null,   //横竖屏切换
-            onenterframe : null          //enterframe回调{Function callback, Array args, Object context}
+            onenterframe : null,          //enterframe回调{Function callback, Array args, Object context}
+            onchromecreate: null,          //chrome创建时
+            onchromestart: null,           //chrome滑动开始
+            onchromescrolling: null,       //chrome滑动
+            onchromeend: null,              //chrome滑动结束
+            onchromeexit: null,             //chrome退出（保留）
+            onchromereset: null             //chrome重置
         });
         //------------------------------------
         this.parseDesignSize();
@@ -187,7 +201,7 @@
             this.fps = fps;
         },
         setLocked : function(locked){
-            this.locked = locked;
+            this.locked = locked || this.forcedLock;
 
             if(this.sceneTransition){
                 this.sceneTransition.setLocked(this.locked);
@@ -346,9 +360,193 @@
                 }
             }
         },
+        layoutLongPageChrome : function(index, moduleIndex, chrome){
+            var offset = chrome.offset();
+
+            chrome.attr("data-x", offset.left)
+                  .attr("data-y", offset.top)
+                  .attr("data-width", offset.width)
+                  .attr("data-height", offset.height)
+                  .attr("data-index", index + "," + moduleIndex);
+
+            chrome.css({
+                "left": offset.left + "px",
+                "top": offset.top + "px",
+                "width": offset.width + "px",
+                "height": offset.height + "px"
+            });
+        },
+        configureLongPageChrome : function(index, moduleIndex, type, module, chrome, isReset){
+            var _ins = this;
+            var header = this.header ? this.header.offset() : {width:0, height:0};
+            var mo = module.offset();
+            var mw = mo.width;
+            var mh = mo.height;
+            var hh = header.height;
+            var dir = chrome.attr("data-dir");
+            var bound = Number(chrome.attr("data-bound"));
+            var isBind = "1" == chrome.attr("data-bind");
+            var width = Number(chrome.attr("data-width"));
+            var height = Number(chrome.attr("data-height"));
+            var maxScrollX = width - mw;
+            var maxScrollY = height - (1 - ((height / mh) - Math.floor(height / mh))) * mh - hh;
+            var startX = 0;
+            var startY = 0;
+            var scrollX = 0;
+            var scrollY = 0;
+            var moveX = 0;
+            var moveY = 0;
+            var matrix = "matrix(${a}, ${b}, ${c}, ${d}, ${x}, ${y})";
+            var opt = {
+                "a": "1",
+                "b": "0",
+                "c": "0",
+                "d": "1",
+                "x": "0",
+                "y": "${y}"
+            };
+
+            if("x" == dir){
+                opt = $.extend(opt, {"x": "${x}", "y": "0"});
+            }
+            var args = JSON.stringify(opt);
+            var ZERO = {"x": "0", "y": "0"};
+            var MAX = {"x": -maxScrollX, "y": -maxScrollY};
+
+            var moveTo = function(point){
+                var meta = JSON.parse(Util.formatData(args, point));
+                var func = Util.formatData(matrix, meta) + " " + translateZ;
+
+                Style.css(chrome, "transform", func);
+            };
+
+            if(true === isReset){
+                moveX = moveY = 0;
+                moveTo(ZERO);
+
+                chrome.off();
+                _ins.exec("chromereset", [index, moduleIndex, type, module, chrome, isReset]);
+            }else{
+                chrome.on(startEvent, function(e){
+                    var pointer = (("changedTouches" in e) ? e.changedTouches[0] : e);
+                    var x = startX = pointer.pageX;
+                    var y = startY = pointer.pageY;
+
+                    _ins.exec("chromestart", [index, moduleIndex, type, module, chrome, isReset, x, y, maxScrollX, maxScrollY]);
+                }).on(moveEvent, function(e){
+                    var pointer = (("changedTouches" in e) ? e.changedTouches[0] : e);
+
+                    var x = pointer.pageX;
+                    var y = pointer.pageY;
+                    var dx = scrollX = x + moveX - startX;
+                    var dy = scrollY = y + moveY - startY;
+
+                    var p = {
+                        "x": dx,
+                        "y": dy
+                    };
+
+                    moveTo(p);
+
+                    var locked = true;
+                    var cp = "x" == dir ? dx : dy;
+                    var mp = "x" == dir ? maxScrollX : maxScrollY;
+
+                    if(cp > 0 && cp >= bound){
+                        locked = false;
+                    }else if(cp < 0 && (Math.abs(cp) >= (bound + mp))){
+                        locked = false;
+                    }
+
+                    _ins.forcedLock = locked;
+                    _ins.setLocked(locked);
+
+                    _ins.exec("chromescrolling", [index, moduleIndex, type, module, chrome, isReset, dx, dy, maxScrollX, maxScrollY]);
+                }).on(endEvent, function(e){
+                    var pointer = (("changedTouches" in e) ? e.changedTouches[0] : e);
+
+                    var dx = moveX = scrollX;
+                    var dy = moveY = scrollY;
+                    var cp = "x" == dir ? dx : dy;
+                    var mp = "x" == dir ? maxScrollX : maxScrollY;
+                    var abs = Math.abs(cp);
+                    
+                    if((SCROLL.VERTICAL == _ins.scroll && "y" == dir) || (SCROLL.HORIZONTAL == _ins.scroll && "x" == dir)){
+                        if(cp > 0){
+                            if(cp < bound){
+                                moveX = moveY = 0;
+                                moveTo(ZERO);
+                            }
+                        }else if(cp < 0){
+                            if(abs > mp){
+                                if(abs < (bound + mp)){
+                                    moveX = -maxScrollX;
+                                    moveY = -maxScrollY;
+                                    moveTo(MAX);
+                                }
+                            }
+                        }
+                    }else{
+                        if(cp > 0){
+                            moveX = moveY = 0;
+                            moveTo(ZERO);
+                        }else if(cp < 0 && abs > mp){
+                            moveX = -maxScrollX;
+                            moveY = -maxScrollY;
+                            moveTo(MAX);
+                        }
+                    }
+
+                    _ins.exec("chromeend", [index, moduleIndex, type, module, chrome, isReset, dx, dy, maxScrollX, maxScrollY]);
+                }); 
+            }
+        },
+        createViewFrame : function(index, moduleIndex, type, module, chrome, isReset){
+            var _ins = this;
+            var layout = "layout" + type + "Chrome";
+            var configure = "configure" + type + "Chrome";
+
+            //强制锁定
+            _ins.forcedLock = !!!isReset;
+            _ins.setLocked(!!!isReset);
+
+            if(layout in _ins && _ins.forcedLock){
+                _ins[layout].apply(_ins, [index, moduleIndex, chrome]);
+            }
+
+            if(configure in _ins){
+                _ins[configure].apply(_ins, [index, moduleIndex, type, module, chrome, isReset]);
+            }
+
+            if(true !== isReset){
+                _ins.exec("chromecreate", [index, moduleIndex, type, module, chrome, isReset]);
+            }
+        },
+        createViewChrome : function(index, isReset){
+            var _ins = this;
+            var module = $(_ins.modules[index]);
+            var chrome = module.find('[data-chrome]');
+            var size = chrome.length;
+            var node = null;
+            var type = null;
+            var method = null;
+
+            if(size > 0){
+                for(var i = 0; i < size; i++){
+                    node = $(chrome[i]);
+                    type = node.attr("data-chrome");
+
+                    _ins["createViewFrame"].apply(_ins, [i, index, type, module, chrome, isReset]);
+                }
+            }
+        },
+        restoreViewChrome : function(index){
+            var _ins = this;
+
+            _ins.createViewChrome(index, true);
+        },
         configure : function(){
             var _ins = this;
-            var _prepage = -1;
 
             var st = null;
 
@@ -377,6 +575,7 @@
             st.set("end", {
                 callback: function(e, x, y, shiftX, shiftY, distance, index){
                     this.currentIndex = index;
+                    this.restoreViewChrome(index);
                     this.exec("exit", [e, x, y, shiftX, shiftY, distance, index]);
                 },
                 context: _ins
@@ -386,6 +585,7 @@
                     var _ins = this;
 
                     _ins.currentIndex = index;
+                    _ins.createViewChrome(index, false);
                     _ins.showModuleWidget(index);
                     _ins.restoreExceptModuleWidget(index);
                     _ins.execLazyLoading(index);
