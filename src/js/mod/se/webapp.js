@@ -378,18 +378,16 @@
         },
         configureLongPageChrome : function(index, moduleIndex, type, module, chrome, isReset){
             var _ins = this;
-            var header = this.header ? this.header.offset() : {width:0, height:0};
             var mo = module.offset();
             var mw = mo.width;
             var mh = mo.height;
-            var hh = header.height;
             var dir = chrome.attr("data-dir");
             var bound = Number(chrome.attr("data-bound"));
             var isBind = "1" == chrome.attr("data-bind");
             var width = Number(chrome.attr("data-width"));
             var height = Number(chrome.attr("data-height"));
             var maxScrollX = width - mw;
-            var maxScrollY = height - (1 - ((height / mh) - Math.floor(height / mh))) * mh - hh;
+            var maxScrollY = height - mh;
             var startX = 0;
             var startY = 0;
             var scrollX = 0;
@@ -471,30 +469,13 @@
                     var mp = "x" == dir ? maxScrollX : maxScrollY;
                     var abs = Math.abs(cp);
                     
-                    if((SCROLL.VERTICAL == _ins.scroll && "y" == dir) || (SCROLL.HORIZONTAL == _ins.scroll && "x" == dir)){
-                        if(cp > 0){
-                            if(cp < bound){
-                                moveX = moveY = 0;
-                                moveTo(ZERO);
-                            }
-                        }else if(cp < 0){
-                            if(abs > mp){
-                                if(abs < (bound + mp)){
-                                    moveX = -maxScrollX;
-                                    moveY = -maxScrollY;
-                                    moveTo(MAX);
-                                }
-                            }
-                        }
-                    }else{
-                        if(cp > 0){
-                            moveX = moveY = 0;
-                            moveTo(ZERO);
-                        }else if(cp < 0 && abs > mp){
-                            moveX = -maxScrollX;
-                            moveY = -maxScrollY;
-                            moveTo(MAX);
-                        }
+                    if(cp > 0){
+                        moveX = moveY = 0;
+                        moveTo(ZERO);
+                    }else if(cp < 0 && abs > mp){
+                        moveX = -maxScrollX;
+                        moveY = -maxScrollY;
+                        moveTo(MAX);
                     }
 
                     _ins.exec("chromeend", [index, moduleIndex, type, module, chrome, isReset, dx, dy, maxScrollX, maxScrollY]);
