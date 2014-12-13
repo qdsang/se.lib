@@ -697,6 +697,12 @@
                 _ins.showModuleWidget(0);
                 _ins.restoreExceptModuleWidget(0);
             }
+
+            if(_ins.modules.length <= 1){
+                _ins.forcedLock = true;
+                _ins.setLocked(true);
+            }
+
             _ins.execLazyLoading(0);
             _ins.exec("end", [null, 0]);
 
