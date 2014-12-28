@@ -48,6 +48,11 @@
         "HIDDEN_Y": "hidden-y"
     };
 
+    var TARGET = {
+        "VIEW": "view",
+        "DESIGN": "design"
+    };
+
     var Widget = function(app, module, widget, data){
         this.app = app;
         this.module = module;
@@ -63,7 +68,28 @@
 
             la.set("complete", {
                 callback : function(target){
-                    this.app.exec("widget", [this.module, this.widget]);
+                    this.app.exec("widgetcomplete", [this.module, this.widget]);
+                },
+                context : this
+            });
+
+            la.set("play", {
+                callback : function(target){
+                    this.app.exec("widgetplay", [this.module, this.widget]);
+                },
+                context : this
+            });
+
+            la.set("reset", {
+                callback : function(target){
+                    this.app.exec("widgetreset", [this.module, this.widget]);
+                },
+                context : this
+            });
+
+            la.set("playing", {
+                callback : function(target, index){
+                    this.app.exec("widgetplaying", [this.module, this.widget, index]);
                 },
                 context : this
             });
@@ -105,26 +131,37 @@
             oFooter = null;
         }
 
+        var snapKey = oApp.attr("data-snap");
+
         this.root = $("html");
+
         this.appId = appId;
         this.viewId = viewId;
         this.headerId = headerId;
         this.footerId = footerId;
+
         this.app = oApp;
         this.view = oView;
         this.header = oHeader;
         this.footer = oFooter;
-        this.scroller = null;
-        this.modules = null;
-        this.innerboxes = null;
+
+        this.snaps = snapKey ? oApp.find(snapKey) : [];
         this.widgets = {};
-        this.mode = TransitionEffect.ROTATE;
-        this.scroll = SCROLL.VERTICAL;
-        this.widgetMode = WIDGET_MODE.ONCE;
-        this.adaptive = ADAPTIVE.NONE;
-        this.overflow = OVERFLOW.ADAPTIVE;
+
+        this.scroller = $(".webapp-modules");
+        this.modules = $(".webapp-modules>section");
+        this.innerboxes = $(".webapp-modules>section>.innerbox");
+        this.mode = oApp.attr("data-mode") || TransitionEffect.ROTATE;
+        this.scroll = oApp.attr("data-scroll") || SCROLL.VERTICAL;
+        this.widgetMode = oApp.attr("data-widget-mode") || WIDGET_MODE.ONCE;
+        this.adaptive = oApp.attr("data-adaptive") || ADAPTIVE.NONE;
+        this.overflow = oApp.attr("data-overflow") || OVERFLOW.ADAPTIVE;
+        this.target = oApp.attr("data-target") || TARGET.VIEW;
+        this.align = oApp.attr("data-align") || null; 
+
         this.design = {width: 640, height: 960};
         this.viewport = {width:"device-width", height:"device-height", user_scalable:"no"};
+
         this.currentIndex = 0;
         this.lazyLoading = 2;
         this.fps = 0;
@@ -138,14 +175,20 @@
 
         this.listener = new Listener({
             oninit : null,              //初始化时的回调{Function callback, Array args, Object context}
+            onlayout : null,
             onstart : null,              //滑动开始{Function callback, Array args, Object context}
             onscrolling : null,           //滑动中{Function callback, Array args, Object context}
             onend : null,                //滑动结束{Function callback, Array args, Object context}
             onexit : null,                //退出
-            onwidget : null,              //widget完成{Function callback, Array args, Object context}
+            onmovement: null,
+            onshift: null,
             onresize : null,              //窗口大小重置{Function callback, Array args, Object context}
             onorientationchange : null,   //横竖屏切换
             onenterframe : null,          //enterframe回调{Function callback, Array args, Object context}
+            onwidgetcomplete : null,       //widget完成{Function callback, Array args, Object context}
+            onwidgetplay: null,
+            onwidgetplaying: null,
+            onwidgetreset: null,
             onchromecreate: null,          //chrome创建时
             onchromestart: null,           //chrome滑动开始
             onchromescrolling: null,       //chrome滑动
@@ -156,6 +199,7 @@
         //------------------------------------
         this.parseDesignSize();
         this.parseViewportInfo();
+        this.execLayoutSize();
     };
 
     _WebApp.prototype = {
@@ -207,7 +251,7 @@
                 this.sceneTransition.setLocked(this.locked);
             }
         },
-        layout : function(node, view, def, handler){
+        layout : function(name, node, view, def, handler){
             $.each(node, function(index, item){
                 var tmp = $(item);
 
@@ -228,6 +272,8 @@
 
                 tmp = null;
             });
+
+            this.exec("layout", [name, node, view, def]);
         },
         updateViewportMeta : function(options){
             var _ins = this;
@@ -254,7 +300,7 @@
 
             meta.attr("content", content.join(", "));
         },
-        update : function(){
+        execLayoutSize : function(){
             var _ins = this;
             var viewport = _ins.viewport;
             var design = _ins.design;
@@ -266,6 +312,8 @@
             var dh = design.height;
             var vw = 0;
             var vh = 0;
+            var iw = 0;
+            var ih = 0;
 
             if(viewport.width != "device-width" && !isNaN(Number(viewport.width))){
                 vw = Number(viewport.width);
@@ -279,27 +327,63 @@
             var footer = this.footer ? this.footer.offset() : {width:0, height:0};
 
             h = h - header.height - footer.height;
+            vh = vh - header.height - footer.height;
 
-            var v = {
-                width: (_ins.adaptive == ADAPTIVE.AUTO || _ins.adaptive == ADAPTIVE.X ? w : vw || w),
-                height: (_ins.adaptive == ADAPTIVE.AUTO || _ins.adaptive == ADAPTIVE.Y ? h : vh || h)
+            iw = vw || w;
+            ih = vh || h;
+
+            //视窗大小
+            this.viewSize = {
+                width: (_ins.adaptive == ADAPTIVE.AUTO || _ins.adaptive == ADAPTIVE.X ? w : iw),
+                height: (_ins.adaptive == ADAPTIVE.AUTO || _ins.adaptive == ADAPTIVE.Y ? h : ih)
             };
 
-            var iv = {
-                width: (_ins.overflow == OVERFLOW.HIDDEN || _ins.overflow == OVERFLOW.HIDDEN_X ? Math.max(w, dw) : w),
-                height: (_ins.overflow == OVERFLOW.HIDDEN || _ins.overflow == OVERFLOW.HIDDEN_Y ? Math.max(h, dh) : h)
+            //设计大小
+            this.designSize = {
+                width: (_ins.overflow == OVERFLOW.HIDDEN || _ins.overflow == OVERFLOW.HIDDEN_X ? (_ins.target == TARGET.DESIGN ? dw : iw) : iw),
+                height: (_ins.overflow == OVERFLOW.HIDDEN || _ins.overflow == OVERFLOW.HIDDEN_Y ? (_ins.target == TARGET.DESIGN ? dh : ih) : ih)
             };
 
-            _ins.layout(_ins.view, v, v, null);
-            _ins.layout(_ins.modules, v, v, {
+            this.snapSize = {
+                width: Math.min(_ins.designSize.width, _ins.viewSize.width),
+                height: Math.min(_ins.designSize.height, _ins.viewSize.height)
+            };
+        },
+        update : function(){
+            var _ins = this;
+
+            //视窗大小
+            var v = _ins.viewSize;
+
+            //设计大小
+            var iv = _ins.designSize;
+
+            var sv = _ins.snapSize;
+           
+            _ins.layout("app", _ins.app, v, v, {
+                callback: function(index, node){
+                    node.css({
+                        position: "relative",
+                        margin: "0 auto"
+                    });
+                }, 
+                context: _ins
+            });
+            _ins.layout("body", _ins.app.find("body"), v, v, null);
+            _ins.layout("view", _ins.view, v, v, null);
+            _ins.layout("snap", _ins.snaps, sv, sv, null);
+            _ins.layout("module", _ins.modules, v, v, {
                 callback: function(index, module){
                     this.queryModuleWidget(index, module);
+
+                    if(this.align){
+                        module.addClass(this.align);
+                    }
                 },
                 context: _ins
             });
-            _ins.layout(_ins.scroller, _ins.scroller.offset(), v, null);
-            _ins.layout(_ins.innerboxes, iv, iv, null);
-
+            _ins.layout("scroller", _ins.scroller, _ins.scroller.offset(), v, null);
+            _ins.layout("innerbox", _ins.innerboxes, iv, iv, null);
         },
         preventTouchMove : function(){
             $(document).on("touchmove", function(e){
@@ -394,6 +478,7 @@
             var scrollY = 0;
             var moveX = 0;
             var moveY = 0;
+            var isStarted = false;
             var matrix = "matrix(${a}, ${b}, ${c}, ${d}, ${x}, ${y})";
             var opt = {
                 "a": "1",
@@ -430,8 +515,13 @@
                     var x = startX = pointer.pageX;
                     var y = startY = pointer.pageY;
 
+                    isStarted = true;
                     _ins.exec("chromestart", [index, moduleIndex, type, module, chrome, isReset, x, y, maxScrollX, maxScrollY]);
                 }).on(moveEvent, function(e){
+                    if(!isStarted){
+                        return 0;
+                    }
+
                     var pointer = (("changedTouches" in e) ? e.changedTouches[0] : e);
 
                     var x = pointer.pageX;
@@ -461,6 +551,8 @@
 
                     _ins.exec("chromescrolling", [index, moduleIndex, type, module, chrome, isReset, dx, dy, maxScrollX, maxScrollY]);
                 }).on(endEvent, function(e){
+                    isStarted = false;
+
                     var pointer = (("changedTouches" in e) ? e.changedTouches[0] : e);
 
                     var dx = moveX = scrollX;
@@ -558,6 +650,20 @@
                     this.currentIndex = index;
                     this.restoreViewChrome(index);
                     this.exec("exit", [e, x, y, shiftX, shiftY, distance, index]);
+                },
+                context: _ins
+            });
+            st.set("movement", {
+                callback: function(e, x, y, shiftX, shiftY, distance, index, direction){
+                    this.currentIndex = index;
+                    this.exec("movement", [e, x, y, shiftX, shiftY, distance, index, direction]);
+                },
+                context: _ins
+            });
+            st.set("shift", {
+                callback: function(e, x, y, shiftX, shiftY, distance, index, direction){
+                    this.currentIndex = index;
+                    this.exec("shift", [e, x, y, shiftX, shiftY, distance, index, direction]);
                 },
                 context: _ins
             });
@@ -680,17 +786,8 @@
         },
         init : function(isAutoLoadWidget){
             var _ins = this;
+
             _ins.currentIndex = 0;
-
-            _ins.scroller = $(".webapp-modules");
-            _ins.modules = $(".webapp-modules>section");
-            _ins.innerboxes = $(".webapp-modules>section>.innerbox");
-            _ins.mode = _ins.app.attr("data-mode") || TransitionEffect.ROTATE;
-            _ins.scroll = _ins.app.attr("data-scroll") || SCROLL.VERTICAL;
-            _ins.widgetMode = _ins.app.attr("data-widget-mode") || WIDGET_MODE.ONCE;
-            _ins.adaptive = _ins.app.attr("data-adaptive") || ADAPTIVE.NONE;
-            _ins.overflow = _ins.app.attr("data-overflow") || OVERFLOW.ADAPTIVE;
-
             _ins.createViewport();
 
             if(false !== isAutoLoadWidget){
@@ -704,6 +801,8 @@
             }
 
             _ins.execLazyLoading(0);
+
+            _ins.exec("init", [isAutoLoadWidget]);
             _ins.exec("end", [null, 0]);
 
             _ins.enterframe();
@@ -731,34 +830,29 @@
             var app = new _WebApp(appId, viewId, headerId, footerId);
 
             return {
-                "mode" : TransitionEffect.ROTATE,
-                "scroll" : SCROLL.VERTICAL,
-                "widgetMode" : WIDGET_MODE.ONCE,
-                "adaptive" : ADAPTIVE.NONE,
-                "overflow" : OVERFLOW.ADAPTIVE,
+                "mode" : app.mode,
+                "scroll" : app.scroll,
+                "widgetMode" : app.widgetMode,
+                "adaptive" : app.adaptive,
+                "overflow" : app.overflow,
+                "target": app.target,
+                "align": app.align,
                 "design": app.design,
                 "app" : app.app,
                 "view" : app.view,
                 "header" : app.header,
                 "footer" : app.footer,
-                "scroller" : null,
-                "modules" : null,
-                "innerboxes" : null,
+                "scroller" : app.scroller,
+                "modules" : app.modules,
+                "innerboxes" : app.innerboxes,
                 "viewport" : app.viewport,
+                "layout" : {
+                    "view": app.viewSize,
+                    "design": app.designSize,
+                    "snap": app.snapSize
+                },
                 "create" : function(isAutoLoadWidget){
                     app.init(isAutoLoadWidget);
-
-                    this.mode = app.mode;
-                    this.scroll = app.scroll;
-                    this.widgetMode = app.widgetMode;
-                    this.adaptive = app.adaptive;
-                    this.overflow = app.overflow;
-                    this.design = app.design;
-                    this.scroller = app.scroller;
-                    this.modules = app.modules;
-                    this.innerboxes = app.innerboxes;
-
-                    app.exec("init", []);
                 },
                 "getCurrentIndex" : function(){
                     return app.currentIndex;

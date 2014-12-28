@@ -6,8 +6,10 @@
   data-adaptive="none|auto|x|y"                            view尺寸适配方式，默认：none
   data-overflow="hidden|hidden-x|hidden-y|adaptive"        溢出处理，默认：adaptive
   data-widget-mode="everytime|once"                        元素播放模式，默认：once
+  data-target="view|design"                                innerbox尺寸参考对象，默认为view的尺寸
+  data-align=""                                            innerbox的对齐方式，自定义class对innerbox布局
 -->
-<html class="webapp" data-design="640/960" data-adaptive="auto" data-overflow="hidden" data-mode="screen" data-widget-mode="everytime" data-scroll="vertical" id="webapp">
+<html class="webapp" data-design="640/960" data-adaptive="auto" data-overflow="hidden" data-mode="screen" data-widget-mode="everytime" data-scroll="vertical" data-target="view" data-align="" id="webapp">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, user-scalable=no, minimal-ui, target-densitydpi=device-dpi" />
@@ -16,8 +18,9 @@
   <meta name="format-detection"content="telephone=no, email=no" />
   <title>Web App</title>
   <link rel="stylesheet" type="text/css" href="/css/lib/g.css">
+  <link rel="stylesheet" type="text/css" href="/css/lib/animate.css">
   <style type="text/css">
-  @-webkit-keyframes rotate{
+/*  @-webkit-keyframes rotate{
     from {
       -webkit-transform: rotate(0deg);
     }
@@ -32,7 +35,7 @@
     to {
       transform: rotate(360deg);
     }
-  }
+  }*/
   /*
   [data-chrome]{width: 3300px;}
   [data-chrome]>div{display: inline-block; width: 320px; margin: 0; padding: 0;}*/
@@ -46,7 +49,7 @@
         <div data-widget="transition::opacity:1!1s ease 1s" style="opacity:0">hello world</div>
         <div data-widget="transition::translate:200px,30px!1s ease 1s;opacity:1!0.4s ease" style="transform:translate(0px,30px) translateZ(0);opacity:0;">i am coming...</div>
         <div data-widget="transition::translate:100px,200px!1s ease>scale:0.5,0.5!0.5s ease" style="transform:translate(0,0) translateZ(0) scale(1,1); width:40px; height:40px; ">
-          <div data-widget="animation::rotate:!1s linear infinite normal" style="transform:rotate(0); width:40px; height:40px; background:#fff; text-align:center; line-heihgt:40px; font-size:28px;">A</div>
+          <div class="transparent" data-widget="animation::flash:!1s linear 3 normal" style="width:40px; height:40px; background:#fff; text-align:center; line-heihgt:40px; font-size:28px;">A</div>
         </div>
         <div style="height:350px">M 1</div>
       </div>

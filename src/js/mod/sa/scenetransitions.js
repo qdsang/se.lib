@@ -84,6 +84,7 @@
             onstart: null,
             onmove: null,
             onend: null,
+            onmovement: null,
             oncomplete: null
         });       
     };
@@ -278,6 +279,8 @@
 
                     data.moveDirection = distance / shift; //1: prev, -1: next
 
+                    data.exec("movement", [].concat(args).concat([data.moveDirection]));
+
                     if(data.locked || !data.enabled || !data.touched){
                         return 1;
                     }
@@ -313,7 +316,7 @@
                     var distance = Direction.HORZIONTAL == data.direction ? shiftX : shiftY;
                     var args = [e, x, y, shiftX, shiftY, distance, data.currentIndex];
 
-                    data.exec("shift", args);
+                    data.exec("shift", [].concat(args).concat([data.moveDirection]));
 
                     if(data.locked || !data.enabled || !data.touched){
                         return 1;

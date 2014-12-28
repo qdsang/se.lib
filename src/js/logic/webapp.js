@@ -9,6 +9,13 @@ define(function(require,exports,module){
 		}
 	});
 
+	app.set("widgetplay", {
+		callback : function(module, target){
+			target.removeClass("transparent");
+			console.info("widget play....")
+		}
+	})
+
 	app.set("chromecreate", {
 		callback : function(index, moduleIndex, type, module, chrome, isReset){
 			console.info("create: " + type)

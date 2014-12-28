@@ -99,6 +99,9 @@
             onanimationStart : null,  
             onanimationEnd : null,   
             onanimationIteration : null,  
+            onplay : null,
+            onplaying : null,
+            onreset : null,
             oncomplete : null  
         });
 
@@ -423,7 +426,7 @@
         },
         __play__ : function(){
             var effect = this.queue[this.current];
-
+            
             if(effect){
                 var properties = effect.properties;
                 var values = effect.values;
@@ -441,6 +444,13 @@
                     var css = this.mergerCss(this.runtimeStyle, properties.join(";"), animate.join(";"));       
 
                     this.runtimeStyle = this.domNode.style.cssText = css; 
+                }
+
+                this.exec("playing", [this.target, this.current]);
+
+                if(effect.values.length == 0){
+                    this.current++;
+                    this.__play__();
                 }
             }else{
                 this.exec("complete", [this.target]);
@@ -460,6 +470,7 @@
         },
         play : function(){
             this.reset();
+            this.exec("play", [this.target]);
 
             this.__play__();
         },
@@ -471,6 +482,7 @@
             }
             this.animationIndex = 0;
             this.current = 0;
+            this.exec("reset", [this.target]);
         }
     };
 
