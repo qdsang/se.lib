@@ -84,7 +84,7 @@
         this.backupClass = this.domNode.className;
         this.runtimeClass = this.backupClass;
         //transition::property:value!duration easing delay;property:value!duration easing delay>property:value!duration easing delay
-        //animation::name:!duration timing-function delay iteration-count direction fill-mode play-state
+        //animation::name:!duration timing-function delay iteration-count direction fill-mode play-state>name:!duration timing-function delay iteration-count direction fill-mode play-state
         //class::className!append>className!append
         //append -> true|false
         this.source = source;

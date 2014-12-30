@@ -689,11 +689,17 @@
         },
         resize : function(){
             var _ins = this;
-
-            _ins.view.css({
+            var _size = {
                 "width": "100%",
                 "height": "100%"
-            });
+            };
+            _ins.app.css(_size);
+            _ins.app.find("body").css(_size);
+            _ins.view.css(_size);
+            _ins.scroller.css(_size);
+            _ins.modules.css(_size);
+
+            _ins.execLayoutSize();
             _ins.update();
         },
         enterframe : function(){
