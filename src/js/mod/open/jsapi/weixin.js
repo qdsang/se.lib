@@ -29,7 +29,27 @@
         }
     }
 
+    var _MetaNode = $('script[name="wx"]');
+    var _MetaData = (function(){
+        var items = null;
+        var item = null;
+        var splitIndex = -1;
+        var o = {};
+        var content = _MetaNode.html() || "";
+        content = content.replace(/([\s ]*[\r\n]+[\s ]*)/g, "\n").replace(/\n$/, "");
+        content = content.replace(/^([\s ]*\n+[\s ]*)|([\s ]*\n+[\s ]*)$/, "");
+        items = content.split(/\n/);
+
+        for(var i = 0, j = items.length; i < j; i++){
+            item = items[i];
+            splitIndex = item.indexOf("=");
+            o[item.substring(0, splitIndex).replace(/^([\s ]*)|([\s ]*)$/g, "")] = item.substring(splitIndex).replace(/^([\s ]*=[\s ]*)/g, "");
+        }
+
+        return o;
+    })();
     var _api = {
+        MetaData : _MetaData,
         Share : {
             /**
              * 分享到微博

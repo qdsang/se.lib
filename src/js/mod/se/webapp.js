@@ -199,6 +199,7 @@
         //------------------------------------
         this.parseDesignSize();
         this.parseViewportInfo();
+        this.reset();
         this.execLayoutSize();
     };
 
@@ -304,8 +305,8 @@
             var _ins = this;
             var viewport = _ins.viewport;
             var design = _ins.design;
-            var offset = _ins.view.offset();
-
+            var offset = _ins.app.offset();
+            
             var w = offset.width;
             var h = offset.height;
             var dw = design.width;
@@ -687,7 +688,7 @@
             _ins.update();
             _ins.configure();
         },
-        resize : function(){
+        reset : function(){
             var _ins = this;
             var _size = {
                 "width": "100%",
@@ -698,7 +699,11 @@
             _ins.view.css(_size);
             _ins.scroller.css(_size);
             _ins.modules.css(_size);
-
+        },
+        resize : function(){
+            var _ins = this;
+            
+            _ins.reset();
             _ins.execLayoutSize();
             _ins.update();
         },
