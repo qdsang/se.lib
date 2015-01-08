@@ -96,9 +96,11 @@
 
             return la;
         },
+        update : function(source){
+            this.effect.source(source);
+        },
         next : function(){
             this.effect.play();
-            
         },
         restore : function(){
             this.effect.reset();
@@ -406,6 +408,30 @@
 
                     _ins.widgets[key].push(new Widget(_ins, module, w, data));
                 });
+            }
+        },
+        updateModuleWidget : function(index){
+            var _ins = this;
+            var widgets = null;
+            var key = String(index);
+            var module = $(_ins.modules[index]);
+
+            if(_ins.widgets[key]){
+                widgets = module.find('[data-widget]');
+
+                $.each(widgets, function(i, widget){
+                    var w = $(widget);
+                    var data = w.attr("data-widget");
+                    var _widget = _ins.widgets[key][i];
+
+                    if(_widget){
+                        _widget.update(data);
+                    }else{
+                        _ins.widgets[key].push(new Widget(_ins, module, w, data));
+                    }
+                });
+            }else{
+                _ins.queryModuleWidget(index, module);
             }
         },
         showModuleWidget : function(index){
@@ -890,6 +916,11 @@
                 },
                 "execLazyLoading" : function(index){
                     app.execLazyLoading(index);
+
+                    return this;
+                },
+                "updateModuleWidget" : function(index){
+                    app.updateModuleWidget(index);
 
                     return this;
                 },

@@ -468,11 +468,49 @@
             this.backupClass = this.domNode.className;
             this.runtimeClass = this.backupClass;
         },
-        play : function(){
-            this.reset();
-            this.exec("play", [this.target]);
+        getWidgetCurrentStyle: function(name){
+            var property = Style.getRealPropertyName(name);
 
-            this.__play__();
+            return this.target.css(property);
+        },
+        setWidgetCurrentStyle: function(name, value){
+            var property = Style.getRealPropertyName(name);
+
+            this.target.css(property, value);
+        },
+        play : function(){
+            var _ins = this;
+
+            _ins.reset();
+            
+            _ins.__play__();
+
+            var delay = "0s";
+            var schema = _ins.type;
+            var unit = "s";
+            var iDelay = 0;
+
+            if(Types.TRANSITION == schema){
+                delay = _ins.getWidgetCurrentStyle("transition-delay");
+            }else if(Types.ANIMATION == schema){
+                delay = _ins.getWidgetCurrentStyle("animation-delay");
+            }else if(Types.CLASS == schema){
+                delay = (_ins.getWidgetCurrentStyle("animation-delay") || _ins.getWidgetCurrentStyle("transition-delay"));
+            }
+
+            if(delay){
+                delay = delay.toLowerCase();
+                unit = delay.indexOf("ms") == -1 ? "s" : "ms";
+                iDelay = Number(delay.substring(0, delay.indexOf(unit)));
+
+                if("s" == unit){
+                    iDelay = iDelay * 1000;
+                }
+            }
+
+            setTimeout(function(){
+                _ins.exec("play", [_ins.target]);
+            }, iDelay);
         },
         reset : function(){
             if(Types.CLASS == this.type){
@@ -541,6 +579,14 @@
                 },
                 "on" : function(force){
                     la.on(force);
+
+                    return this;
+                },
+                "getWidgetCurrentStyle": function(name){
+                    return la.getWidgetCurrentStyle(name);
+                },
+                "setWidgetCurrentStyle": function(name, value){
+                    la.setWidgetCurrentStyle(name, value);
 
                     return this;
                 }
