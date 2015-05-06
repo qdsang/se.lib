@@ -1,2 +1,0 @@
-/*! Copyright (c) SESHENGHUO.COM - Author: LIJUN - Email: zwlijun@gmail.com - Git: https://github.com/zwlijun/se.lib */
-!function(a){var b,c=[];a.fn.remove=function(){return this.each(function(){this.parentNode&&("IMG"===this.tagName&&(c.push(this),this.src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=",b&&clearTimeout(b),b=setTimeout(function(){c=[]},6e4)),this.parentNode.removeChild(this))})}}(Zepto);
